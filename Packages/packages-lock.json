@@ -1,11 +1,10 @@
 {
   "dependencies": {
     "com.amenone.shadermodules": {
-      "version": "git@github.com:amenonegames/ShaderModules.git?path=/Packages/ShaderModules",
+      "version": "file:ShaderModules",
       "depth": 0,
-      "source": "git",
-      "dependencies": {},
-      "hash": "dee7b9a015c2127328788a48a783bf54cb0907b2"
+      "source": "embedded",
+      "dependencies": {}
     },
     "com.unity.2d.animation": {
       "version": "9.1.1",
