@@ -19,6 +19,7 @@ Shader "Custom/Sample"
 
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
             #include "Packages/com.amenone.shadermodules/noise.cginc"
+            #include "Packages/com.amenone.shadermodules/transpose.cginc"
 
             struct Attributes
             {
@@ -50,15 +51,26 @@ Shader "Custom/Sample"
 
             half4 frag(Varyings IN) : SV_Target
             {
+                float2 uv = IN.uv;
+                uv = uv_to_polar(uv);
+                
                 half4 color = half4(0,0,0,0);
-                // color = random(IN.uv);
-                // color = simplex_noise(IN.uv,0.1);
-                // color = turbulence(IN.uv,0.5,8,0.8);
-                // color = ridge(IN.uv,0.5,4,1.5);
-                // color = voronoi (IN.uv,.1);
-                // color = voronoi_normalized (IN.uv,.1);
-                // color = cellular(IN.uv,.1,float2(1,_Time.y));
-                color = fbm_cellular(IN.uv,0.4,8,.01,float2(1,_Time.y));
+                // color = random(uv);
+                // color = fbm(uv,0.5,8);
+                // color = simplex_noise(uv,0.1);
+                // color = turbulence(uv,0.5,8,0.8);
+                // color = ridge(uv,0.5,4,1.5);
+                // color = voronoi (uv,.1);
+                // color = voronoi_normalized (uv,.1);
+                // color = cellular(uv,.1,float2(1,_Time.y));
+                // color = fbm_cellular(uv,0.4,8,.1,float2(1,_Time.y));
+                color = fbm_voronoi_normalized(uv,0.4,8,.1,float2(1,_Time.y));
+                
+                // sample combine animation
+                // half sinedTime = _Time.y + pow(sin(_Time.w),3);
+                // half f = fbm(uv + sinedTime,0.5,8);
+                // color = turbulence(float2(uv.x ,uv.y + f),0.5,8,0.8);
+                
                 return color;
             }
             ENDHLSL
