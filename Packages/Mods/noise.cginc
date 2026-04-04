@@ -379,3 +379,65 @@ float2 voronoi_blur(float2 x, float cell_size, float blur)
     return voronoi_blur(x, cell_size, blur, float2(0.0, 0.0));
 }
 
+// 入力ポイントをずらした値でノイズ生成し、結果の勾配をベクトルとして出力する。
+float3 curl_noise(float3 p, float cell_size, float gradiantDirRandomizer)
+{
+    float3 v = p / cell_size;
+    const float e = 0.1;
+    const float divisor = 1.0 / (2.0 * e);
+
+    float3 dx = float3(e, 0.0, 0.0);
+    float3 dy = float3(0.0, e, 0.0);
+    float3 dz = float3(0.0, 0.0, e);
+
+    const float2 seed2 = float2(5.2, 1.3);
+    const float2 seed3 = float2(1.7, 9.2);
+
+    float x = (simplex_noise((v + dy).xy + seed3, gradiantDirRandomizer) - simplex_noise((v - dy).xy + seed3, gradiantDirRandomizer))
+            - (simplex_noise((v + dz).xz + seed2, gradiantDirRandomizer) - simplex_noise((v - dz).xz + seed2, gradiantDirRandomizer));
+
+    float y = (simplex_noise((v + dz).yz,         gradiantDirRandomizer) - simplex_noise((v - dz).yz,         gradiantDirRandomizer))
+            - (simplex_noise((v + dx).xy + seed3, gradiantDirRandomizer) - simplex_noise((v - dx).xy + seed3, gradiantDirRandomizer));
+
+    float z = (simplex_noise((v + dx).xz + seed2, gradiantDirRandomizer) - simplex_noise((v - dx).xz + seed2, gradiantDirRandomizer))
+            - (simplex_noise((v + dy).yz,         gradiantDirRandomizer) - simplex_noise((v - dy).yz,         gradiantDirRandomizer));
+
+    return float3(x, y, z) * divisor;
+}
+
+float3 curl_noise(float3 p, float cell_size)
+{
+    const float gradiant_dir_randomizer = 0.024390243902439;
+    return curl_noise(p, cell_size, gradiant_dir_randomizer);
+}
+
+float3 curl_noise(float3 p)
+{
+    return curl_noise(p, 1.0);
+}
+
+//curlのfbm版 計算負荷が非常に高い
+float3 curl_noise_fbm(float3 p, half amplitude, int NUM_OCTAVES)
+{
+    const float e = 0.1;
+    const float divisor = 1.0 / (2.0 * e);
+
+    float3 dx = float3(e, 0.0, 0.0);
+    float3 dy = float3(0.0, e, 0.0);
+    float3 dz = float3(0.0, 0.0, e);
+
+    const float2 seed2 = float2(5.2, 1.3);
+    const float2 seed3 = float2(1.7, 9.2);
+
+    float x = (fbm((p + dy).xy + seed3, amplitude, NUM_OCTAVES) - fbm((p - dy).xy + seed3, amplitude, NUM_OCTAVES))
+            - (fbm((p + dz).xz + seed2, amplitude, NUM_OCTAVES) - fbm((p - dz).xz + seed2, amplitude, NUM_OCTAVES));
+
+    float y = (fbm((p + dz).yz,         amplitude, NUM_OCTAVES) - fbm((p - dz).yz,         amplitude, NUM_OCTAVES))
+            - (fbm((p + dx).xy + seed3, amplitude, NUM_OCTAVES) - fbm((p - dx).xy + seed3, amplitude, NUM_OCTAVES));
+
+    float z = (fbm((p + dx).xz + seed2, amplitude, NUM_OCTAVES) - fbm((p - dx).xz + seed2, amplitude, NUM_OCTAVES))
+            - (fbm((p + dy).yz,         amplitude, NUM_OCTAVES) - fbm((p - dy).yz,         amplitude, NUM_OCTAVES));
+
+    return float3(x, y, z) * divisor;
+}
+
