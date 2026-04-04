@@ -29,16 +29,16 @@ float2 scale(float2 uv, float factor)
     return scale(uv, float2(factor, factor));
 }
 
-float2x2 rot(float angle) {
+float2x2 _rot(float angle) {
     float s = sin(angle);
     float c = cos(angle);
     float2x2 m = float2x2(c, -s, s, c);
     return m;
 }
 
-// in: float2 uv[0,1], float 回転角(ラジアン)  out: float2 中心基準で回転したuv
+// in: float2 uv[0,1], float 回転量[0,1](0=0度, 1=360度)  out: float2 中心基準で回転したuv
 float2 rotate(float2 uv, float angle)
 {
-    return mul(rot(angle), uv - 0.5) + 0.5;
+    return mul(_rot(angle * 6.28318), uv - 0.5) + 0.5;
 }
 
