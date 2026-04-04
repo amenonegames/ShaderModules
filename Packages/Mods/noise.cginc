@@ -10,6 +10,7 @@ uint2 uhash22(uint2 n)
     return n * k.xy;
 }
             
+// in: float2 任意の座標  out: float2 [0,1] の乱数
 float2 hash22(float2 p)
 {
     uint x = asuint(p.x);
@@ -18,6 +19,7 @@ float2 hash22(float2 p)
     return float2( uhash22(n)) /  float(0xffffffffu) ;
 }
 
+// in: float2 任意の座標  out: float3 [0,1] の乱数
 float3 hash23(float2 p)
 {
     uint x = asuint(p.x);
@@ -29,7 +31,7 @@ float3 hash23(float2 p)
 }
 
 
-// Get random value
+// in: float2 任意の座標  out: half [0,1] の乱数（スカラー）
 half random(in float2 st)
 {
     uint2 n = asuint(float2(st));
@@ -37,7 +39,7 @@ half random(in float2 st)
     return float2( uhash22(n)) /  float(0xffffffffu) ;
 }
 
-// Get noise
+// in: half2 任意の座標  out: half [0,1] のバイリニア補間ノイズ
 half noise(in half2 st)
 {
     // Splited integer and float values.
@@ -55,6 +57,7 @@ half noise(in half2 st)
     return lerp(a, b, u.x) + (c - a) * u.y * (1.0 - u.x) + (d - b) * u.x * u.y;
 }
 
+// in: half2 座標, half 初期振幅, int オクターブ数  out: half ノイズをオクターブ重ねした値
 half fbm(in half2 st,half amplitude ,int NUM_OCTAVES)
 {
     half v = 0.0;
@@ -95,6 +98,7 @@ float3 permute(float3 x) {
 //  Distributed under the MIT License. See LICENSE file.
 //  https://github.com/ashima/webgl-noise
 //
+// in: float2 座標, float グラデーション方向のランダム化係数(推奨: 1/41≒0.0244)  out: float [-1,1] のシンプレックスノイズ値
 float simplex_noise(float2 v , float gradiantDirRandomizer) {
     const float cx  =0.211324865405187;    // (3.0-sqrt(3.0))/6.0
     const float cy  =0.3660254037844387;    // 0.5*(sqrt(3.0)-1.0)
@@ -148,12 +152,14 @@ float simplex_noise(float2 v , float gradiantDirRandomizer) {
     return 130.0 * dot(m, g);
 }
 
+// in: float2 座標  out: float [-1,1] のシンプレックスノイズ値
 float simplex_noise(float2 v)
 {
     const float gradiant_dir_randomizer = 0.024390243902439;// 1.0 / 41.0
     return simplex_noise(v,gradiant_dir_randomizer);
 }
 
+// in: half2 座標, half 初期振幅, int オクターブ数, float グラデーション方向のランダム化係数  out: half 乱流ノイズ値（絶対値fbm）
 half turbulence(in half2 st,half amplitude ,int NUM_OCTAVES , float gradiantDirRandomizer)
 {
     half v = 0.0;
@@ -168,6 +174,7 @@ half turbulence(in half2 st,half amplitude ,int NUM_OCTAVES , float gradiantDirR
 
     return v;
 }
+// in: half2 座標, half 初期振幅, int オクターブ数  out: half 乱流ノイズ値
 half turbulence(in half2 st,half amplitude ,int NUM_OCTAVES)
 {
     const float gradiant_dir_randomizer = 0.024390243902439;// 1.0 / 41.0
@@ -175,6 +182,7 @@ half turbulence(in half2 st,half amplitude ,int NUM_OCTAVES)
     return v;
 }
 
+// in: half2 座標, half 初期振幅, int オクターブ数, float オフセット(稜線の高さ), int 縁の鋭さ, float グラデーション方向のランダム化係数  out: half 稜線状ノイズ値
 half ridge(in half2 st,half amplitude ,int NUM_OCTAVES,float offset,int edgePow,float gradiantDirRandomizer)
 {
     half v = turbulence(st,amplitude,NUM_OCTAVES,gradiantDirRandomizer);
@@ -183,12 +191,14 @@ half ridge(in half2 st,half amplitude ,int NUM_OCTAVES,float offset,int edgePow,
     v = max(v,0);
     return v;
 }
+// in: half2 座標, half 初期振幅, int オクターブ数, float オフセット, int 縁の鋭さ  out: half 稜線状ノイズ値
 half ridge(in half2 st,half amplitude ,int NUM_OCTAVES,float offset,int edgePow)
 {
     const float gradiant_dir_randomizer = 0.024390243902439;// 1.0 / 41.0
     half v = ridge(st,amplitude,NUM_OCTAVES,offset,edgePow,gradiant_dir_randomizer);
     return v;
 }
+// in: half2 座標, half 初期振幅, int オクターブ数, float オフセット  out: half 稜線状ノイズ値（edgePow=2）
 half ridge(in half2 st,half amplitude ,int NUM_OCTAVES,float offset)
 {
     const float gradiant_dir_randomizer = 0.024390243902439;// 1.0 / 41.0
@@ -197,7 +207,7 @@ half ridge(in half2 st,half amplitude ,int NUM_OCTAVES,float offset)
     return v;
 }
 
-// .xy: F1, F2 (最近傍・2番目の距離)  .zw: 最近傍セルのID (hash22)
+// in: float2 正規化済み座標, float2 セルオフセット(位相)  out: float4 .x=F1(最近傍距離) .y=F2(2番目の距離) .zw=最近傍セルID
 float4 _cellularBase(float2 v, float2 cellOffset) {
     float F1 = 999.0;
     float F2 = 999.0;
@@ -224,8 +234,7 @@ float4 _cellularBase(float2 v, float2 cellOffset) {
 }
 
 
-// blur: ぼかし量 (0=シャープ, 1=ぼかし)
-// .x: ノイズ値  .y: 重み付きセルID
+// in: float2 座標, float セルサイズ, float ぼかし量[0=シャープ,1=ぼかし], float2 セルオフセット(位相)  out: float2 .x=ノイズ値 .y=重み付きセルID
 float2 voronoi_blur(float2 x, float cell_size, float blur, float2 cellOffset)
 {
     float2 v = x / cell_size;
@@ -258,7 +267,7 @@ float4 _cellularBase(float2 v) {
     return _cellularBase(v, float2(0.0, 0.0));
 }
 
-// .x: 距離値  .y: 最近傍セルID (hash22.x)
+// in: float2 座標, float セルサイズ, float2 セルオフセット(位相)  out: float2 .x=最近傍距離F1 .y=最近傍セルID
 float2 voronoi(float2 v, float cell_size, float2 cellOffset) {
     float4 c = _cellularBase(v/cell_size, cellOffset);
     return float2(c.x, c.z);
@@ -267,6 +276,7 @@ float2 voronoi(float2 v, float cell_size) {
     return voronoi(v, cell_size, float2(0.0, 0.0));
 }
 
+// in: float2 座標, float セルサイズ, float2 セルオフセット(位相)  out: float2 .x=F2-F1(境界で高くなる) .y=最近傍セルID
 float2 cellular(float2 v, float cell_size, float2 cellOffset) {
     float4 c = _cellularBase(v/cell_size, cellOffset);
     return float2(c.y - c.x, c.z);
@@ -275,6 +285,7 @@ float2 cellular(float2 v, float cell_size) {
     return cellular(v, cell_size, float2(0.0, 0.0));
 }
 
+// in: float2 座標, float セルサイズ, float2 セルオフセット(位相)  out: float2 .x=F1/F2(境界で1に近づく) .y=最近傍セルID
 float2 voronoi_normalized(float2 v, float cell_size, float2 cellOffset) {
     float4 c = _cellularBase(v/cell_size, cellOffset);
     return float2(c.x / c.y, c.z);
@@ -283,7 +294,7 @@ float2 voronoi_normalized(float2 v, float cell_size) {
     return voronoi_normalized(v, cell_size, float2(0.0, 0.0));
 }
 
-// .x: 距離値のfbm  .y: セルIDの累積平均
+// in: half2 座標, half 初期振幅, int オクターブ数, float セルサイズ, float2 セルオフセット(位相)  out: float2 .x=voronoiのfbm値 .y=セルIDの累積平均
 float2 fbm_voronoi(in half2 st, half amplitude, int NUM_OCTAVES, float cell_size, float2 cellOffset)
 {
     half v = 0.0;
@@ -306,6 +317,7 @@ float2 fbm_voronoi(in half2 st, half amplitude, int NUM_OCTAVES, float cell_size
     return fbm_voronoi(st, amplitude, NUM_OCTAVES, cell_size, float2(0.0, 0.0));
 }
 
+// in: half2 座標, half 初期振幅, int オクターブ数, float セルサイズ, float2 セルオフセット(位相), float ぼかし量[0,1]  out: float2 .x=voronoi_blurのfbm値 .y=セルIDの累積平均
 float2 fbm_voronoi_blur(in half2 st, half amplitude, int NUM_OCTAVES, float cell_size, float2 cellOffset,float blur)
 {
     half v = 0.0;
@@ -330,6 +342,7 @@ float2 fbm_voronoi_blur(in half2 st, half amplitude, int NUM_OCTAVES, float cell
 }
 
 
+// in: half2 座標, half 初期振幅, int オクターブ数, float セルサイズ, float2 セルオフセット(位相)  out: float2 .x=cellularのfbm値 .y=セルIDの累積平均
 float2 fbm_cellular(in half2 st, half amplitude, int NUM_OCTAVES, float cell_size, float2 cellOffset)
 {
     half v = 0.0;
@@ -352,6 +365,7 @@ float2 fbm_cellular(in half2 st, half amplitude, int NUM_OCTAVES, float cell_siz
     return fbm_cellular(st, amplitude, NUM_OCTAVES, cell_size, float2(0.0, 0.0));
 }
 
+// in: half2 座標, half 初期振幅, int オクターブ数, float セルサイズ, float2 セルオフセット(位相)  out: float2 .x=voronoi_normalizedのfbm値 .y=セルIDの累積平均
 float2 fbm_voronoi_normalized(in half2 st, half amplitude, int NUM_OCTAVES, float cell_size, float2 cellOffset)
 {
     half v = 0.0;
