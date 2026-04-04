@@ -52,7 +52,7 @@ Shader "Custom/Sample"
             half4 frag(Varyings IN) : SV_Target
             {
                 float2 uv = IN.uv;
-                uv = uv_to_polar(uv);
+                // uv = uv_to_polar(uv);
                 
                 half4 color = half4(0,0,0,0);
                 // color = random(uv);
@@ -60,12 +60,17 @@ Shader "Custom/Sample"
                 // color = simplex_noise(uv,0.1);
                 // color = turbulence(uv,0.5,8,0.8);
                 // color = ridge(uv,0.5,4,1.5);
-                // color = voronoi (uv,.1);
-                // color = voronoi_normalized (uv,.1);
-                // color = cellular(uv,.1,float2(1,_Time.y));
-                // color = fbm_cellular(uv,0.4,8,.1,float2(1,_Time.y));
-                color = fbm_voronoi_normalized(uv,0.4,8,.1,float2(1,_Time.y));
-                
+                //color = voronoi (uv,.1);
+                // color = voronoi(uv,.1).y;
+                // color = voronoi_normalized (uv,.1).x;
+                // color = cellular(uv,.1,float2(1,_Time.y)).x;
+                // color = fbm_cellular(uv,0.4,8,.1,float2(1,_Time.y)).x;
+                // color = fbm_voronoi_normalized(uv,0.4,8,.1,float2(1,_Time.y)).x;
+                // color = voronoi_blur(uv,0.1,0.6,_Time.y).x;
+                // color = fbm_voronoi_blur(uv,0.4,8,3.,float2(1,_Time.y),.2).x;
+                // color.xyz += curl_noise(float3(uv,_Time.x*0.1),0.08);
+                color.xyz = curl_noise_fbm(float3(uv,_Time.x),1.,8);
+
                 // sample combine animation
                 // half sinedTime = _Time.y + pow(sin(_Time.w),3);
                 // half f = fbm(uv + sinedTime,0.5,8);
