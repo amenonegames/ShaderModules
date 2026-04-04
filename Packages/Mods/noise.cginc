@@ -45,23 +45,6 @@ half noise(in half2 st)
     return lerp(a, b, u.x) + (c - a) * u.y * (1.0 - u.x) + (d - b) * u.x * u.y;
 }
 
-half stepnoise(in half2 st)
-{
-    // Splited integer and float values.
-    half2 i = floor(st);
-    half2 f = frac(st);
-
-    half a = random(i + half2(0.0, 0.0));
-    half b = random(i + half2(1.0, 0.0));
-    half c = random(i + half2(0.0, 1.0));
-    half d = random(i + half2(1.0, 1.0));
-
-    // -2.0f^3 + 3.0f^2
-    half2 u = f * f * (3.0 - 2.0 * f);
-
-    return round(lerp(a, b, u.x) + (c - a) * u.y * (1.0 - u.x) + (d - b) * u.x * u.y);
-}
-
 half fbm(in half2 st,half amplitude ,int NUM_OCTAVES)
 {
     half v = 0.0;
@@ -203,5 +186,111 @@ half ridge(in half2 st,half amplitude ,int NUM_OCTAVES,float offset)
     half v = ridge(st,amplitude,NUM_OCTAVES,offset,default_edgePow,gradiant_dir_randomizer);
     return v;
 }
+// 内部用はアンダースコアで「これは内部実装だよ」と示す慣習
+float2 _cellularBase(float2 v, float2 cellOffset) {
+    float F1 = 999.0;
+    float F2 = 999.0;
 
+    for (int y = -1; y <= 1; y++) {
+        for (int x = -1; x <= 1; x++) {
+            float2 cell = floor(v) + float2(x, y);
+            float2 randomVal = hash22(cell);
+            float2 featurePoint = cell + 0.5 + 0.5 * sin(cellOffset + 6.28318 * randomVal);//sinで値を0-1間で連続させることで破綻を防ぐ
+            float dist = length(v - featurePoint);
+
+            if (dist < F1) {
+                F2 = F1;
+                F1 = dist;
+            } else if (dist < F2) {
+                F2 = dist;
+            }
+        }
+    }
+
+    return float2(F1, F2);
+}
+
+float2 _cellularBase(float2 v) {
+    return _cellularBase(v, float2(0.0, 0.0));
+}
+
+float voronoi(float2 v, float cell_size, float2 cellOffset) {
+    return _cellularBase(v/cell_size, cellOffset).x;
+}
+float voronoi(float2 v , float cell_size) {
+    return voronoi(v, cell_size, float2(0.0, 0.0));
+}
+
+float cellular(float2 v, float cell_size, float2 cellOffset) {
+    float2 c = _cellularBase(v/cell_size, cellOffset);
+    return c.y - c.x;
+}
+float cellular(float2 v, float cell_size) {
+    return cellular(v, cell_size, float2(0.0, 0.0));
+}
+
+float voronoi_normalized(float2 v, float cell_size, float2 cellOffset) {
+    float2 c = _cellularBase(v/cell_size, cellOffset);
+    return c.x / c.y;
+}
+float voronoi_normalized(float2 v, float cell_size) {
+    return voronoi_normalized(v, cell_size, float2(0.0, 0.0));
+}
+
+float fbm_voronoi(in half2 st, half amplitude, int NUM_OCTAVES, float cell_size, float2 cellOffset)
+{
+    half v = 0.0;
+    half a = amplitude;
+
+    for (int i = 0; i < NUM_OCTAVES; i++)
+    {
+        v += a * voronoi(st, cell_size, cellOffset);
+        st = st * 2.0;
+        a *= 0.5;
+    }
+
+    return v;
+}
+float fbm_voronoi(in half2 st,half amplitude ,int NUM_OCTAVES,float cell_size)
+{
+    return fbm_voronoi(st, amplitude, NUM_OCTAVES, cell_size, float2(0.0, 0.0));
+}
+
+float fbm_cellular(in half2 st, half amplitude, int NUM_OCTAVES, float cell_size, float2 cellOffset)
+{
+    half v = 0.0;
+    half a = amplitude;
+
+    for (int i = 0; i < NUM_OCTAVES; i++)
+    {
+        v += a * cellular(st, cell_size, cellOffset);
+        st = st * 2.0;
+        a *= 0.5;
+    }
+
+    return v;
+}
+float fbm_cellular(in half2 st,half amplitude ,int NUM_OCTAVES,float cell_size)
+{
+    return fbm_cellular(st, amplitude, NUM_OCTAVES, cell_size, float2(0.0, 0.0));
+}
+
+float fbm_voronoi_normalized(in half2 st, half amplitude, int NUM_OCTAVES, float cell_size, float2 cellOffset)
+{
+    half v = 0.0;
+    half a = amplitude;
+
+    for (int i = 0; i < NUM_OCTAVES; i++)
+    {
+        v += a * voronoi_normalized(st, cell_size, cellOffset);
+        st = st * 2.0;
+        a *= 0.5;
+    }
+
+    return v;
+}
+float fbm_voronoi_normalized(in half2 st,half amplitude ,int NUM_OCTAVES,float cell_size)
+{
+    return fbm_voronoi_normalized(st, amplitude, NUM_OCTAVES, cell_size, float2(0.0, 0.0));
+}
 
