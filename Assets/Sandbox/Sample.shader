@@ -54,7 +54,11 @@ Shader "Custom/Sample"
                 // color = random(IN.uv);
                 // color = simplex_noise(IN.uv,0.1);
                 // color = turbulence(IN.uv,0.5,8,0.8);
-                color = ridge(IN.uv,0.5,4,1.5);
+                // color = ridge(IN.uv,0.5,4,1.5);
+                // color = voronoi (IN.uv,.1);
+                // color = voronoi_normalized (IN.uv,.1);
+                // color = cellular(IN.uv,.1,float2(1,_Time.y));
+                color = fbm_cellular(IN.uv,0.4,8,.01,float2(1,_Time.y));
                 return color;
             }
             ENDHLSL
