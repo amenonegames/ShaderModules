@@ -1,0 +1,23 @@
+// Each #kernel tells which function to compile; you can have many kernels
+#pragma kernel ParticleMain
+
+struct Particle
+{
+    float3 basePosition;
+    float3 position;
+    float4 color;
+    float scale;
+};
+
+RWStructuredBuffer<Particle> _ParticleBuffer;
+float _DeltaTime;
+
+[numthreads(8,1,1)]
+void ParticleMain (uint3 id : SV_DispatchThreadID)
+{
+    const int index = id.x;
+    
+    Particle p = _ParticleBuffer[index];
+    p.position += (p.basePosition - p.position) * _DeltaTime;
+    _ParticleBuffer[index] = p;
+}
