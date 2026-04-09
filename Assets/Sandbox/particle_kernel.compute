@@ -11,13 +11,14 @@ struct Particle
 
 RWStructuredBuffer<Particle> _ParticleBuffer;
 float _DeltaTime;
+int _ParticleCount;
 
-[numthreads(8,1,1)]
+[numthreads(64,1,1)]
 void ParticleMain (uint3 id : SV_DispatchThreadID)
 {
-    const int index = id.x;
-    
-    Particle p = _ParticleBuffer[index];
+    if (id.x >= (uint)_ParticleCount) return;
+
+    Particle p = _ParticleBuffer[id.x];
     p.position += (p.basePosition - p.position) * _DeltaTime;
-    _ParticleBuffer[index] = p;
+    _ParticleBuffer[id.x] = p;
 }

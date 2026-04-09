@@ -10,6 +10,7 @@ namespace Sandbox
     {
         private static readonly int ParticleBuffer = Shader.PropertyToID("_ParticleBuffer");
         private static readonly int DeltaTime = Shader.PropertyToID("_DeltaTime");
+        private static readonly int ParticleCount = Shader.PropertyToID("_ParticleCount");
 
         [SerializeField] private int _count = 10000;
         [SerializeField] private ComputeShader _computeShader;
@@ -34,6 +35,7 @@ namespace Sandbox
         private void Start()
         {
             _kernelId = _computeShader.FindKernel("ParticleMain");
+            _computeShader.SetInt(ParticleCount, _count);
 
             var vertices = new List<Vector3>();
             _targetMeshFilter.mesh.GetVertices(vertices);
@@ -76,7 +78,7 @@ namespace Sandbox
         private void Update()
         {
             _computeShader.SetFloat(DeltaTime, Time.deltaTime);
-            _computeShader.Dispatch(_kernelId, _count / 8, 1, 1);
+            _computeShader.Dispatch(_kernelId, Mathf.CeilToInt(_count / 64f), 1, 1);
 
             Graphics.RenderMeshIndirect(_renderParams, _particleMesh, _argBuffer);
         }
