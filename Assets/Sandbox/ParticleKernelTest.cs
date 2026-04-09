@@ -11,6 +11,9 @@ namespace Sandbox
         private static readonly int ParticleBuffer = Shader.PropertyToID("_ParticleBuffer");
         private static readonly int DeltaTime = Shader.PropertyToID("_DeltaTime");
         private static readonly int ParticleCount = Shader.PropertyToID("_ParticleCount");
+        private static readonly int AliveList = Shader.PropertyToID("_AliveList");
+        private static readonly int AliveCount = Shader.PropertyToID("_AliveCount");
+        private static readonly int ArgBuffer = Shader.PropertyToID("_argBuffer");
 
         [SerializeField] private int _count = 10000;
         [SerializeField] private ComputeShader _computeShader;
@@ -21,7 +24,10 @@ namespace Sandbox
 
         private GraphicsBuffer _particleBuffer;
         private GraphicsBuffer _argBuffer;
+        private GraphicsBuffer _aliveListBuffer;
+        private GraphicsBuffer _aliveCountBuffer;
         private int _kernelId;
+        private int _copyAliveCountId;
         private RenderParams _renderParams;
 
         public struct Particle
@@ -30,11 +36,15 @@ namespace Sandbox
             public Vector3 position;
             public Vector4 color;
             public float scale;
+            public float lifetime;
         }
 
         private void Start()
         {
             _kernelId = _computeShader.FindKernel("ParticleMain");
+            var initializeId = _computeShader.FindKernel("Initialize");
+            _copyAliveCountId  = _computeShader.FindKernel("CopyAliveCount");
+
             _computeShader.SetInt(ParticleCount, _count);
 
             var vertices = new List<Vector3>();
@@ -55,7 +65,18 @@ namespace Sandbox
             _particleBuffer = new GraphicsBuffer(GraphicsBuffer.Target.Structured, _count, Marshal.SizeOf<Particle>());
             _particleBuffer.SetData(particles);
             _computeShader.SetBuffer(_kernelId, ParticleBuffer, _particleBuffer);
+            _computeShader.SetBuffer(initializeId, ParticleBuffer, _particleBuffer);
             _particleMat.SetBuffer(ParticleBuffer, _particleBuffer);
+
+            _aliveListBuffer = new GraphicsBuffer(GraphicsBuffer.Target.Structured, _count, sizeof(uint));
+            _computeShader.SetBuffer(_kernelId, AliveList, _aliveListBuffer);
+            _computeShader.SetBuffer(initializeId, AliveList, _aliveListBuffer);
+            _particleMat.SetBuffer(AliveList, _aliveListBuffer);
+
+            _aliveCountBuffer = new GraphicsBuffer(GraphicsBuffer.Target.Structured, 1,
+                sizeof(uint));
+            _computeShader.SetBuffer(_kernelId, AliveCount, _aliveCountBuffer);
+            _computeShader.SetBuffer(_copyAliveCountId, AliveCount, _aliveCountBuffer);
 
             var args = new uint[5]
             {
@@ -65,21 +86,25 @@ namespace Sandbox
                 _particleMesh.GetBaseVertex(0),
                 0,
             };
-            _argBuffer = new GraphicsBuffer(GraphicsBuffer.Target.IndirectArguments, 1, sizeof(uint) * args.Length);
+            _argBuffer = new GraphicsBuffer(GraphicsBuffer.Target.IndirectArguments | GraphicsBuffer.Target.Structured,
+                args.Length,
+                    sizeof(uint));
             _argBuffer.SetData(args);
+            _computeShader.SetBuffer(_copyAliveCountId, ArgBuffer, _argBuffer);
 
             _renderParams = new RenderParams(_particleMat)
             {
                 worldBounds = new Bounds(Vector3.zero, Vector3.one * 32f),
                 matProps = new MaterialPropertyBlock(),
             };
+            _computeShader.Dispatch(initializeId,Mathf.CeilToInt(_count / 64f), 1, 1);
         }
 
         private void Update()
         {
             _computeShader.SetFloat(DeltaTime, Time.deltaTime);
             _computeShader.Dispatch(_kernelId, Mathf.CeilToInt(_count / 64f), 1, 1);
-
+            _computeShader.Dispatch(_copyAliveCountId,1,1,1);
             Graphics.RenderMeshIndirect(_renderParams, _particleMesh, _argBuffer);
         }
 
@@ -87,6 +112,8 @@ namespace Sandbox
         {
             _particleBuffer?.Dispose();
             _argBuffer?.Dispose();
+            _aliveListBuffer?.Dispose();
+            _aliveCountBuffer?.Dispose();
         }
     }
 }

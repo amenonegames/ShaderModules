@@ -30,9 +30,11 @@ Shader "Unlit/Particle"
                 float3 position;
                 float4 color;
                 float scale;
+                float lifetime;
             };
 
             StructuredBuffer<Particle> _ParticleBuffer;
+            StructuredBuffer<uint> _AliveList;
             TEXTURE2D(_MainTex);
             SAMPLER(sampler_MainTex);
 
@@ -53,8 +55,8 @@ Shader "Unlit/Particle"
             Varyings vert(Attributes input, uint instanceID : SV_InstanceID)
             {
                 UNITY_SETUP_INSTANCE_ID(input);
-
-                Particle p = _ParticleBuffer[instanceID];
+                int index = _AliveList[instanceID];
+                Particle p = _ParticleBuffer[index];
 
                 float3 worldPos = input.positionOS.xyz * p.scale + p.position;
 
