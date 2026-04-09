@@ -223,7 +223,7 @@ GameObject:
   - component: {fileID: 1690416955}
   - component: {fileID: 1690416954}
   - component: {fileID: 1690416953}
-  - component: {fileID: 1690416952}
+  - component: {fileID: 1690416957}
   m_Layer: 0
   m_Name: Sphere
   m_TagString: Untagged
@@ -231,24 +231,6 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!114 &1690416952
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1690416951}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: e9ec7c3faa244c2396b3f1098af1fe61, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::Sandbox.ParticleKernelTest
-  _count: 10000
-  _computeShader: {fileID: 7200000, guid: 3033bbeff9e2415381eecf93eb86f0e9, type: 3}
-  _particleMesh: {fileID: 10202, guid: 0000000000000000e000000000000000, type: 0}
-  _targetMeshFilter: {fileID: 1690416955}
-  _particleMat: {fileID: 2100000, guid: b1ac68305f043ab48aab3cae65579ae2, type: 2}
-  _color: {r: 0, g: 0, b: 1, a: 1}
 --- !u!135 &1690416953
 SphereCollider:
   m_ObjectHideFlags: 0
@@ -326,7 +308,7 @@ MeshFilter:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1690416951}
-  m_Mesh: {fileID: 10207, guid: 0000000000000000e000000000000000, type: 0}
+  m_Mesh: {fileID: 0}
 --- !u!4 &1690416956
 Transform:
   m_ObjectHideFlags: 0
@@ -342,6 +324,24 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1690416957
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1690416951}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e9ec7c3faa244c2396b3f1098af1fe61, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Sandbox.ParticleKernelTest
+  _count: 10000
+  _computeShader: {fileID: 7200000, guid: 3033bbeff9e2415381eecf93eb86f0e9, type: 3}
+  _particleMesh: {fileID: 10210, guid: 0000000000000000e000000000000000, type: 0}
+  _targetMeshFilter: {fileID: 1690416955}
+  _particleMat: {fileID: 2100000, guid: b1ac68305f043ab48aab3cae65579ae2, type: 2}
+  _color: {r: 0, g: 0, b: 1, a: 1}
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0
