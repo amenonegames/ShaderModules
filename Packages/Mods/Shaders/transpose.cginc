@@ -42,3 +42,11 @@ float2 rotate(float2 uv, float angle)
     return mul(_rot(angle * 6.28318), uv - 0.5) + 0.5;
 }
 
+// in: float2 uv[0,1], float ねじり強度(1=中心からの距離1で360度回転)  out: float2 中心からの距離に比例して回転したuv
+float2 spiral(float2 uv, float strength)
+{
+    float2 polar = uv_to_polar(uv);
+    polar.y += polar.x * strength * 6.28318;
+    return polar_to_uv(polar);
+}
+

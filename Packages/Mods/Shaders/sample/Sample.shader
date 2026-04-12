@@ -7,6 +7,7 @@ Shader "amenone_module/sample"
         [Header(Transpose)]
         [MaterialToggle] _use_polar("Polar (R=radius G=angle)", float) = 0
         [MaterialToggle] _use_rotate("Rotate (RG=uv)", float) = 0
+        [MaterialToggle] _use_spiral("Spiral", float) = 0
         
         [Header(Basic Noise)]
         [MaterialToggle] _use_random("Random", float) = 0
@@ -88,6 +89,7 @@ Shader "amenone_module/sample"
                 float _use_curl_noise_fbm;
                 float _use_polar;
                 float _use_rotate;
+                float _use_spiral;
             CBUFFER_END
 
             Varyings vert(Attributes IN)
@@ -107,6 +109,7 @@ Shader "amenone_module/sample"
                 half4 color = half4(0, 0, 0, 1);
                 if (_use_polar)           uv = uv_to_polar(uv);
                 if (_use_rotate)          uv = rotate(uv,_Time.x);
+                if (_use_spiral)          uv = spiral(uv, 1.);
                 if (_use_random)          color.rgb += random(uv);
                 if (_use_noise)           color.rgb += noise(uv * 8.);
                 if (_use_fbm)             color.rgb += fbm(uv*4., 0.5, 8);
