@@ -48,8 +48,8 @@ Shader "amenone_module/sample"
             #pragma fragment frag
 
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
-            #include "Packages/com.amenone.shadermodules/noise.cginc"
-            #include "Packages/com.amenone.shadermodules/transpose.cginc"
+            #include "Packages/com.amenone.shadermodules/Shaders/noise.cginc"
+            #include "Packages/com.amenone.shadermodules/Shaders/transpose.cginc"
 
             struct Attributes
             {

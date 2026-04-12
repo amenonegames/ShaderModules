@@ -2,7 +2,7 @@
 #pragma kernel ParticleMain
 #pragma kernel Initialize
 #pragma kernel CopyAliveCount
-#include "Packages/com.amenone.shadermodules/noise.cginc"
+#include "Packages/com.amenone.shadermodules/Shaders/noise.cginc"
 struct Particle
 {
     float3 destination;
