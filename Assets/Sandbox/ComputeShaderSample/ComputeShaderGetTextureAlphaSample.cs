@@ -39,18 +39,19 @@ namespace Sandbox
             shrinkBufferTexture.Create();
 
             int computeAlphaID = shader.FindKernel("ComputeAlpha");
-            int expandResult = shader.FindKernel("ExpandTextureResult");
+            // int expandResult = shader.FindKernel("ExpandTextureResult");
             shader.SetTexture(computeAlphaID,Texture1,texture);
             shader.SetTexture(computeAlphaID,ShrinkBuffer, shrinkBufferTexture);
-            shader.SetTexture(expandResult,ShrinkBuffer, shrinkBufferTexture);
+            // shader.SetTexture(expandResult,ShrinkBuffer, shrinkBufferTexture);
 
-            shader.SetTexture(expandResult,ResultTexture,resultTexture);
+            // shader.SetTexture(expandResult,ResultTexture,resultTexture);
             shader.SetInt(Width,pixelPerDivW);
             shader.SetInt(Height,pixelPerDivH);
             shader.SetInt(DivCount,_divCount);
 
             shader.Dispatch(computeAlphaID, _divCount, _divCount, 1);
-            shader.Dispatch(expandResult, texture.width,  texture.height, 1);
+            // shader.Dispatch(expandResult, texture.width,  texture.height, 1);
+            Graphics.Blit(shrinkBufferTexture, resultTexture);
             RenderTexture.ReleaseTemporary(shrinkBufferTexture);
 
             rawImage.texture = resultTexture;
