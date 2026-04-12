@@ -3,7 +3,10 @@ using UnityEngine;
 
 namespace Sandbox
 {
-    public class ComputeShaderSample :MonoBehaviour
+    /// <summary>
+    /// 画像をdevCount数で分割し、各分割領域に対して平均alpha値を算出。結果をrawDataとして取得するデモ
+    /// </summary>
+    public class ComputeShaderGetTextureAlphaSample :MonoBehaviour
     {
         private static readonly int Result = Shader.PropertyToID("Result");
         private static readonly int Texture1 = Shader.PropertyToID("Texture");
@@ -24,7 +27,7 @@ namespace Sandbox
             int num = _divCount * _divCount;
             ComputeBuffer buffer = new ComputeBuffer(num, sizeof(float));
 
-            int kernelID = shader.FindKernel("CSMain");
+            int kernelID = shader.FindKernel("ComputeAlpha");
 
             shader.SetBuffer(kernelID , Result , buffer);
             shader.SetTexture(kernelID,Texture1,texture);
