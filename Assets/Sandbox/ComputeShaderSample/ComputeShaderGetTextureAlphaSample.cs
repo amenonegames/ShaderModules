@@ -1,5 +1,6 @@
 ﻿using System;
 using UnityEngine;
+using UnityEngine.UI;
 
 namespace Sandbox
 {
@@ -8,15 +9,18 @@ namespace Sandbox
     /// </summary>
     public class ComputeShaderGetTextureAlphaSample :MonoBehaviour
     {
-        private static readonly int Result = Shader.PropertyToID("Result");
         private static readonly int Texture1 = Shader.PropertyToID("Texture");
-        private static readonly int Length = Shader.PropertyToID("Length");
         private static readonly int Width = Shader.PropertyToID("pixelPerDivW");
         private static readonly int Height = Shader.PropertyToID("pixelPerDivH");
+        private static readonly int ResultTexture = Shader.PropertyToID("ResultTexture");
+        private static readonly int DivCount = Shader.PropertyToID("divCount");
+        private static readonly int ShrinkBuffer = Shader.PropertyToID("ShrinkBuffer");
         [SerializeField] private ComputeShader shader;
         [SerializeField] private Texture texture;
+        private RenderTexture resultTexture;
         private readonly int _divCount = 10;
 
+        [SerializeField] private RawImage rawImage;
         private void Start()
         {
             int pixelPerDivW = texture.width / _divCount; // 分割区画ごとのピクセル数を算出
@@ -24,22 +28,38 @@ namespace Sandbox
             int pixelPerDivH = texture.height / _divCount;
             pixelPerDivH = pixelPerDivH -  (1 - pixelPerDivH % 2); // 奇数に切り下げ
 
-            int num = _divCount * _divCount;
-            ComputeBuffer buffer = new ComputeBuffer(num, sizeof(float));
+            resultTexture = RenderTexture.GetTemporary(texture.width, texture.height, 0, RenderTextureFormat.ARGB32);
+            resultTexture.filterMode = FilterMode.Point;
+            resultTexture.enableRandomWrite = true;
+            resultTexture.Create();
 
-            int kernelID = shader.FindKernel("ComputeAlpha");
+            var shrinkBufferTexture = RenderTexture.GetTemporary(_divCount, _divCount, 0, RenderTextureFormat.ARGB32);
+            shrinkBufferTexture.filterMode = FilterMode.Point;
+            shrinkBufferTexture.enableRandomWrite = true;
+            shrinkBufferTexture.Create();
 
-            shader.SetBuffer(kernelID , Result , buffer);
-            shader.SetTexture(kernelID,Texture1,texture);
-           shader.SetInt(Length,_divCount);
-           shader.SetInt(Width,pixelPerDivW);
-           shader.SetInt(Height,pixelPerDivH);
+            int computeAlphaID = shader.FindKernel("ComputeAlpha");
+            int expandResult = shader.FindKernel("ExpandTextureResult");
+            shader.SetTexture(computeAlphaID,Texture1,texture);
+            shader.SetTexture(computeAlphaID,ShrinkBuffer, shrinkBufferTexture);
+            shader.SetTexture(expandResult,ShrinkBuffer, shrinkBufferTexture);
 
-           float[] rawData = new float[num];
+            shader.SetTexture(expandResult,ResultTexture,resultTexture);
+            shader.SetInt(Width,pixelPerDivW);
+            shader.SetInt(Height,pixelPerDivH);
+            shader.SetInt(DivCount,_divCount);
 
-            shader.Dispatch(kernelID, _divCount, _divCount, 1);
-            buffer.GetData(rawData);
-            buffer.Release();
+            shader.Dispatch(computeAlphaID, _divCount, _divCount, 1);
+            shader.Dispatch(expandResult, texture.width,  texture.height, 1);
+            RenderTexture.ReleaseTemporary(shrinkBufferTexture);
+
+            rawImage.texture = resultTexture;
+        }
+
+        private void OnDestroy()
+        {
+            if (resultTexture == null) return;
+            RenderTexture.ReleaseTemporary(resultTexture);
         }
     }
 }

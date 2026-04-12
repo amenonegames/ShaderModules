@@ -1,14 +1,15 @@
 // Each #kernel tells which function to compile; you can have many kernels
 #pragma kernel ComputeAlpha
+#pragma kernel ExpandTextureResult
 
 // Create a RenderTexture with enableRandomWrite flag and set it
 // with cs.SetTexture
-RWStructuredBuffer<float> Result;
+RWTexture2D<float> ShrinkBuffer;
 Texture2D<float4> Texture;
 
-int Length;
 int pixelPerDivW;
 int pixelPerDivH;
+int divCount;
 
 [numthreads(1,1,1)]
 void ComputeAlpha (uint3 id : SV_DispatchThreadID)
@@ -29,7 +30,15 @@ void ComputeAlpha (uint3 id : SV_DispatchThreadID)
     }
     
     float denom = 1. / (pixelPerDivW * pixelPerDivH);
-    int index = id.y * Length + id.x;
-    
-    Result[index] = result * denom;
+    ShrinkBuffer[uint2(id.x, id.y)] = result * denom;
+}
+
+RWTexture2D<float4> ResultTexture;
+
+[numthreads(1,1,1)]
+void ExpandTextureResult(uint3 id : SV_DispatchThreadID)
+{
+    uint indexX = id.x / pixelPerDivW;
+    uint indexY = id.y / pixelPerDivH;
+    ResultTexture[uint2(id.x, id.y)] = ShrinkBuffer[uint2(indexX, indexY)];
 }
