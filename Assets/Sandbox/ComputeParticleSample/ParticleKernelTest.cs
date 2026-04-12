@@ -21,6 +21,8 @@ namespace Sandbox
         [SerializeField] private MeshFilter _targetMeshFilter;
         [SerializeField] private Material _particleMat;
         [SerializeField] private Color _color = Color.blue;
+        [SerializeField] private float initialPosDistanceFromZero = 10f;
+        [SerializeField] private float destinationPosDistanceFromZero = 1f;
 
         private GraphicsBuffer _particleBuffer;
         private GraphicsBuffer _argBuffer;
@@ -32,7 +34,7 @@ namespace Sandbox
 
         public struct Particle
         {
-            public Vector3 basePosition;
+            public Vector3 destination;
             public Vector3 position;
             public Vector4 color;
             public float scale;
@@ -55,8 +57,8 @@ namespace Sandbox
             {
                 particles[i] = new Particle
                 {
-                    basePosition = vertices[i % vertices.Count],
-                    position = vertices[i % vertices.Count] + Random.insideUnitSphere * 10f,
+                    destination = vertices[i % vertices.Count] + Random.insideUnitSphere * destinationPosDistanceFromZero,
+                    position = vertices[i % vertices.Count] + Random.insideUnitSphere * initialPosDistanceFromZero,
                     color = _color,
                     scale = Random.Range(0.01f, 0.02f),
                 };

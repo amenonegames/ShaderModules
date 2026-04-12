@@ -5,7 +5,7 @@
 #include "Packages/com.amenone.shadermodules/noise.cginc"
 struct Particle
 {
-    float3 basePosition;
+    float3 destination;
     float3 position;
     float4 color;
     float scale;
@@ -31,7 +31,7 @@ void ParticleMain (uint3 id : SV_DispatchThreadID)
         InterlockedAdd(_AliveCount[0],1,slot);
         _AliveList[slot] = id.x;
         p.lifetime -= _DeltaTime;
-        p.position += (p.basePosition - p.position) * _DeltaTime;
+        p.position += (p.destination - p.position) * _DeltaTime;
         _ParticleBuffer[id.x] = p;
     }
 }

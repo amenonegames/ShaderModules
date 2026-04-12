@@ -26,7 +26,7 @@ Shader "Unlit/Particle"
 
             struct Particle
             {
-                float3 basePosition;
+                float3 destination;
                 float3 position;
                 float4 color;
                 float scale;

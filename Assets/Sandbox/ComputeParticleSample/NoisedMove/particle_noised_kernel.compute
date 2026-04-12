@@ -1,0 +1,61 @@
+﻿// Each #kernel tells which function to compile; you can have many kernels
+#pragma kernel ParticleMain
+#pragma kernel Initialize
+#pragma kernel CopyAliveCount
+#include "Packages/com.amenone.shadermodules/noise.cginc"
+struct Particle
+{
+    float3 basePosition;
+    float3 position;
+    float4 color;
+    float scale;
+    float lifetime;
+};
+
+
+// Create a RenderTexture with enableRandomWrite flag and set it
+// with cs.SetTexture
+//RWTexture2D<float4> Result;
+RWStructuredBuffer<Particle> _ParticleBuffer;
+RWStructuredBuffer<uint> _AliveList;
+RWStructuredBuffer<uint> _AliveCount;
+RWStructuredBuffer<uint> _argBuffer;
+float _DeltaTime;
+int _ParticleCount;
+
+[numthreads(64,1,1)]
+void ParticleMain(uint3 id : SV_DispatchThreadID)
+{
+    if (id.x >= (uint)_ParticleCount) return;
+
+    Particle p = _ParticleBuffer[id.x];
+    if (p.lifetime > 0.0f)
+    {
+        uint slot;
+        InterlockedAdd(_AliveCount[0],1,slot);
+        _AliveList[slot] = id.x;
+        p.lifetime -= _DeltaTime;
+        p.position += (p.basePosition - p.position) * _DeltaTime;
+        p.position += curl_noise(p.position,4.0) *0.001;
+        _ParticleBuffer[id.x] = p;
+    }
+}
+
+[numthreads(64,1,1)]
+void Initialize (uint3 id : SV_DispatchThreadID)
+{
+    if (id.x >= (uint)_ParticleCount) return;
+    const float seedRandomizeFactorX = 1.6180339887;
+    const float seedRandomizeFactorY = 2.6180339887;
+    
+    Particle p = _ParticleBuffer[id.x];
+    p.lifetime = random(float2 (id.x *seedRandomizeFactorX , id.x *seedRandomizeFactorY)) * 2;
+    _ParticleBuffer[id.x] = p;
+}
+
+[numthreads(1,1,1)]
+void CopyAliveCount(uint3 id : SV_DispatchThreadID)
+{
+    _argBuffer[1] = _AliveCount[0];
+    _AliveCount[0] = 0;  // 次フレームのリセットもここで
+}
