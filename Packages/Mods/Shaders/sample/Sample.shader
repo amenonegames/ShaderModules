@@ -34,6 +34,9 @@ Shader "amenone_module/sample"
         [MaterialToggle] _use_curl_noise("Curl Noise", float) = 0
         [MaterialToggle] _use_curl_noise_fbm("Curl Noise FBM", float) = 0
 
+        [Header(Composite)]
+        [MaterialToggle] _use_caustic("Caustic", float) = 0
+
 
     }
 
@@ -87,6 +90,7 @@ Shader "amenone_module/sample"
                 float _use_fbm_voronoi_blur;
                 float _use_curl_noise;
                 float _use_curl_noise_fbm;
+                float _use_caustic;
                 float _use_polar;
                 float _use_rotate;
                 float _use_spiral;
@@ -130,6 +134,20 @@ Shader "amenone_module/sample"
 
                 if (_use_curl_noise)      color.rgb += curl_noise(float3(uv, _Time.x * 0.1), 0.08);
                 if (_use_curl_noise_fbm)  color.rgb += curl_noise_fbm(float3(uv, _Time.x), 1.0, 8);
+
+                if (_use_caustic)
+                {
+                    float2 cuv1 = uv + float2(_Time.y * 0.05, _Time.y * 0.03);
+                    float2 cuv2 = uv + float2(-_Time.y * 0.04, _Time.y * 0.06);
+                    float2 cuv3 = uv + float2(_Time.y * 0.02, -_Time.y * 0.05);;
+                    float v1 = voronoi(cuv1, 0.5, float2(0, 0)).x;
+                    float v2 = voronoi(cuv2, 0.6, float2(0, 0)).x;
+                    float v3 = voronoi(cuv3, 1, float2(0, 0)).x;
+                    float3 col1 = float3(v1,v1,v1) * float3(2.3,.8,1.5);
+                    float3 col2 = float3(v2,v2,v2) * float3(.9,1.8,1.6);
+                    float3 col3 = float3(v3,v3,v3) * float3(1.2,1.,2.8);
+                    color.rgb += pow(col1 * col2 * col3, 1.8) +0.15;
+                }
 
 
 
