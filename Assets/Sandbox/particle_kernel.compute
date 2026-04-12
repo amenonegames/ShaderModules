@@ -40,9 +40,11 @@ void ParticleMain (uint3 id : SV_DispatchThreadID)
 void Initialize (uint3 id : SV_DispatchThreadID)
 {
     if (id.x >= (uint)_ParticleCount) return;
+    const float seedRandomizeFactorX = 1.6180339887;
+    const float seedRandomizeFactorY = 2.6180339887;
     
     Particle p = _ParticleBuffer[id.x];
-    p.lifetime = random(id) * 2;
+    p.lifetime = random(float2 (id.x *seedRandomizeFactorX , id.x *seedRandomizeFactorY)) * 2;
     _ParticleBuffer[id.x] = p;
 }
 

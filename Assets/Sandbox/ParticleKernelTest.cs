@@ -48,7 +48,7 @@ namespace Sandbox
             _computeShader.SetInt(ParticleCount, _count);
 
             var vertices = new List<Vector3>();
-            _targetMeshFilter.mesh.GetVertices(vertices);
+            _targetMeshFilter.mesh.GetVertices(vertices);// スケールや位置を無視したメッシュデータの頂点座標を取得
 
             var particles = new Particle[_count];
             for (int i = 0; i < _count; i++)
@@ -94,8 +94,7 @@ namespace Sandbox
 
             _renderParams = new RenderParams(_particleMat)
             {
-                worldBounds = new Bounds(Vector3.zero, Vector3.one * 32f),
-                matProps = new MaterialPropertyBlock(),
+                worldBounds = new Bounds(Vector3.zero, Vector3.one * 32f), // 描画の最大範囲。この範囲がカメラに収まっていないと描画されない。
             };
             _computeShader.Dispatch(initializeId,Mathf.CeilToInt(_count / 64f), 1, 1);
         }
