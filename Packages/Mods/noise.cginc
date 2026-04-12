@@ -35,8 +35,7 @@ float3 hash23(float2 p)
 half random(in float2 st)
 {
     uint2 n = asuint(float2(st));
-    
-    return float2( uhash22(n)) /  float(0xffffffffu) ;
+    return float2(uhash22(n)).x / float(0xffffffffu);
 }
 
 // in: half2 任意の座標  out: half [0,1] のバイリニア補間ノイズ
@@ -229,7 +228,6 @@ float4 _cellularBase(float2 v, float2 cellOffset) {
             }
         }
     }
-
     return float4(F1, F2, nearestId);
 }
 
@@ -338,7 +336,7 @@ float2 fbm_voronoi_blur(in half2 st, half amplitude, int NUM_OCTAVES, float cell
 
 float2 fbm_voronoi_blur(in half2 st, half amplitude, int NUM_OCTAVES, float cell_size,float blur)
 {
-    return fbm_voronoi_blur(st, amplitude, NUM_OCTAVES, cell_size, blur,float2(0.0, 0.0));
+    return fbm_voronoi_blur(st, amplitude, NUM_OCTAVES, cell_size, float2(0.0, 0.0), blur);
 }
 
 
