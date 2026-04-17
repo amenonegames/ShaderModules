@@ -1,0 +1,12 @@
+﻿// Each #kernel tells which function to compile; you can have many kernels
+#pragma kernel ComputeText
+
+// Create a RenderTexture with enableRandomWrite flag and set it
+// with cs.SetTexture
+//RWTexture2D<float4> Result;
+//RWStructuredBuffer<uint> Result;
+
+[numthreads(64,1,1)]
+void ComputeText(uint3 id : SV_DispatchThreadID)
+{
+}
