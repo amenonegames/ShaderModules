@@ -8,13 +8,15 @@ Shader "Unlit/Particle"
     {
         Tags
         {
-            "RenderType"="Opaque"
+            "RenderType"="Transparent" "Queue"="Transparent"
 //            "RenderPipeline"="UniversalPipeline"
         }
 
         Pass
         {
             Name "UnlitParticle"
+            Blend SrcAlpha OneMinusSrcAlpha
+            ZWrite Off
 //            Tags { "LightMode"="UniversalForward" }
 
             HLSLPROGRAM
@@ -37,6 +39,9 @@ Shader "Unlit/Particle"
             StructuredBuffer<uint> _AliveList;
             TEXTURE2D(_MainTex);
             SAMPLER(sampler_MainTex);
+            CBUFFER_START(UnityPerMaterial)
+            float4 _MainTex_ST;
+            CBUFFER_END
 
             struct Attributes
             {
@@ -63,13 +68,13 @@ Shader "Unlit/Particle"
                 Varyings output;
                 output.positionHCS = TransformWorldToHClip(worldPos);
                 output.color = p.color;
-                output.uv = input.uv;
+                output.uv = TRANSFORM_TEX(input.uv, _MainTex);
                 return output;
             }
 
             half4 frag(Varyings input) : SV_Target
             {
-                return input.color;
+                return SAMPLE_TEXTURE2D(_MainTex,sampler_MainTex,input.uv);
             }
             ENDHLSL
         }

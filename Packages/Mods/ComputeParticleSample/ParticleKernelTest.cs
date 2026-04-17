@@ -15,7 +15,7 @@ namespace Sandbox
         private static readonly int AliveCount = Shader.PropertyToID("_AliveCount");
         private static readonly int ArgBuffer = Shader.PropertyToID("_argBuffer");
 
-        [SerializeField] private int _count = 10000;
+        [SerializeField] private int _count = 10;
         [SerializeField] private ComputeShader _computeShader;
         [SerializeField] private Mesh _particleMesh;
         [SerializeField] private MeshFilter _targetMeshFilter;
@@ -60,7 +60,7 @@ namespace Sandbox
                     destination = vertices[i % vertices.Count] + Random.insideUnitSphere * destinationPosDistanceFromZero,
                     position = vertices[i % vertices.Count] + Random.insideUnitSphere * initialPosDistanceFromZero,
                     color = _color,
-                    scale = Random.Range(0.01f, 0.02f),
+                    scale = Random.Range(1f, 2f),
                 };
             }
 
