@@ -158,6 +158,72 @@ float simplex_noise(float2 v)
     return simplex_noise(v,gradiant_dir_randomizer);
 }
 
+// 値と解析勾配を同時に返す simplex noise（Gustavson/McEwan の sdnoise 方式）
+// in : float2 座標, float グラデーション方向のランダム化係数(推奨: 1/41≒0.0244)
+// out: float3 .x = ノイズ値([-1,1]、simplex_noise と同一), .yz = 勾配(∂/∂x, ∂/∂y)
+float3 simplex_noise_deriv(float2 v, float gradiantDirRandomizer)
+{
+    const float cx = 0.211324865405187;    // (3.0-sqrt(3.0))/6.0
+    const float cy = 0.3660254037844387;   // 0.5*(sqrt(3.0)-1.0)
+    const float cz = -0.5773502691896257;  // -1.0 + 2.0 * C.x
+    float4 C = float4(cx, cy, cz, gradiantDirRandomizer);
+
+    // First corner (x0)
+    float2 i  = floor(v + dot(v, C.yy));
+    float2 x0 = v - i + dot(i, C.xx);
+
+    // Other two corners (x1, x2)
+    float2 i1 = (x0.x > x0.y) ? float2(1.0, 0.0) : float2(0.0, 1.0);
+    float2 x1 = x0 + C.xx - i1;
+    float2 x2 = x0 + C.zz;
+
+    // Permutations
+    i = mod289(i);
+    float3 p = permute(
+            permute(i.y + float3(0.0, i1.y, 1.0))
+                  + i.x + float3(0.0, i1.x, 1.0));
+
+    // 各コーナーの放射フォールオフ t = max(0.5 - |X|^2, 0)（既存 m の素）
+    float3 t  = max(0.5 - float3(dot(x0, x0), dot(x1, x1), dot(x2, x2)), 0.0);
+    float3 t2 = t * t;
+    float3 t3 = t2 * t;
+    float3 t4 = t2 * t2;
+
+    // 勾配ベクトル選択（既存と同一）
+    float3 x  = 2.0 * frac(p * C.www) - 1.0;
+    float3 h  = abs(x) - 0.5;
+    float3 ox = floor(x + 0.5);
+    float3 a0 = x - ox;
+
+    // 暗黙正規化係数（i 由来なので v に対して定数）
+    float3 norm = 1.79284291400159 - 0.85373472095314 * (a0 * a0 + h * h);
+
+    // g_i = grad_i · X_i（既存と同一）
+    float3 g;
+    g.x  = a0.x  * x0.x + h.x  * x0.y;
+    g.yz = a0.yz * float2(x1.x, x2.x) + h.yz * float2(x1.y, x2.y);
+
+    float3 m = norm * t4;               // 既存 simplex_noise の最終 m と一致
+    float value = 130.0 * dot(m, g);    // 既存の返り値と完全一致
+
+    // 勾配: d/dv[130 Σ norm t^4 g] = 130 Σ norm(-8 t^3 g X + t^4 grad)
+    float3 c = -8.0 * t3 * g;           // 各コーナーの X に掛かる係数
+    float2 deriv =
+        norm.x * (c.x * x0 + t4.x * float2(a0.x, h.x)) +
+        norm.y * (c.y * x1 + t4.y * float2(a0.y, h.y)) +
+        norm.z * (c.z * x2 + t4.z * float2(a0.z, h.z));
+    deriv *= 130.0;
+
+    return float3(value, deriv);
+}
+
+// in : float2 座標  out: float3 .x = ノイズ値, .yz = 勾配(∂/∂x, ∂/∂y)
+float3 simplex_noise_deriv(float2 v)
+{
+    const float gradiant_dir_randomizer = 0.024390243902439; // 1.0 / 41.0
+    return simplex_noise_deriv(v, gradiant_dir_randomizer);
+}
+
 // in: half2 座標, half 初期振幅, int オクターブ数, float グラデーション方向のランダム化係数  out: half 乱流ノイズ値（絶対値fbm）
 half turbulence(in half2 st,half amplitude ,int NUM_OCTAVES , float gradiantDirRandomizer)
 {
