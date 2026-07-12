@@ -253,3 +253,11 @@ float ease_in_out(float t, float power)
         ? pow(2.0 * t, power) * 0.5
         : 1.0 - pow(2.0 - 2.0 * t, power) * 0.5;
 }
+
+// in: float 進行度t[0,1], float 傾きの強さ(1=線形,大きいほど鋭い)  out: float 前半out後半inで中央が緩やかな冪乗イージング
+float ease_out_in(float t, float power)
+{
+    return t < 0.5
+        ? (1.0 - pow(1.0 - 2.0 * t, power)) * 0.5
+        : pow(2.0 * t - 1.0, power) * 0.5 + 0.5;
+}
