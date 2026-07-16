@@ -519,3 +519,33 @@ float3 curl_noise_fbm(float3 p, half amplitude, int NUM_OCTAVES)
     return float3(x, y, z) * divisor;
 }
 
+// in: half2 座標, half 初期振幅, int オクターブ数, float ワープ強度, float 時間  out: float 2段ドメインワープ値, q/rは中間の歪みベクトル(色付け等に利用可)
+float domain_warp(in half2 st, half amplitude, int NUM_OCTAVES, float warpStrength, float time, out float2 q, out float2 r)
+{
+    q = float2(
+        fbm(st,                    amplitude, NUM_OCTAVES),
+        fbm(st + float2(1.0, 1.0), amplitude, NUM_OCTAVES));
+
+    r = float2(
+        fbm(st + warpStrength * q + float2(1.7, 9.2) + 0.15  * time, amplitude, NUM_OCTAVES),
+        fbm(st + warpStrength * q + float2(8.3, 2.8) + 0.126 * time, amplitude, NUM_OCTAVES));
+
+    return fbm(st + warpStrength * r, amplitude, NUM_OCTAVES);
+}
+
+float domain_warp(in half2 st, half amplitude, int NUM_OCTAVES, float warpStrength, float time)
+{
+    float2 q, r;
+    return domain_warp(st, amplitude, NUM_OCTAVES, warpStrength, time, q, r);
+}
+
+float domain_warp(in half2 st, half amplitude, int NUM_OCTAVES, float warpStrength)
+{
+    return domain_warp(st, amplitude, NUM_OCTAVES, warpStrength, 0.0);
+}
+
+float domain_warp(in half2 st, half amplitude, int NUM_OCTAVES)
+{
+    return domain_warp(st, amplitude, NUM_OCTAVES, 1.0);
+}
+

@@ -1,6 +1,6 @@
 {
   "name": "com.amenone.shadermodules",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "displayName": "Shader Modules",
   "description": "Shader Modules for Unity",
   "unity": "2020.2",

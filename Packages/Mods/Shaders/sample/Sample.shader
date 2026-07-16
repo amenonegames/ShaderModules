@@ -36,6 +36,7 @@ Shader "amenone_module/sample"
 
         [Header(Composite)]
         [MaterialToggle] _use_caustic("Caustic", float) = 0
+        [MaterialToggle] _use_domain_warp("Domain Warp", float) = 0
 
 
     }
@@ -91,6 +92,7 @@ Shader "amenone_module/sample"
                 float _use_curl_noise;
                 float _use_curl_noise_fbm;
                 float _use_caustic;
+                float _use_domain_warp;
                 float _use_polar;
                 float _use_rotate;
                 float _use_spiral;
@@ -134,6 +136,7 @@ Shader "amenone_module/sample"
 
                 if (_use_curl_noise)      color.rgb += curl_noise(float3(uv, _Time.x * 0.1), 0.08);
                 if (_use_curl_noise_fbm)  color.rgb += curl_noise_fbm(float3(uv, _Time.x), 1.0, 8);
+                if (_use_domain_warp)     color.rgb += domain_warp(uv * 4., 0.5, 4, 1.0, _Time.y);
 
                 if (_use_caustic)
                 {
