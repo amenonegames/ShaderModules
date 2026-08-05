@@ -1,4 +1,5 @@
-
+#ifndef AMENONE_TRANSPOSE_INCLUEDED
+#define AMENONE_TRANSPOSE_INCLUEDED
 // uv: [0,1] range, center at (0.5, 0.5)
 // polar.x: radius from center
 // polar.y: angle in radians [-PI, PI]
@@ -50,3 +51,4 @@ float2 spiral(float2 uv, float strength)
     return polar_to_uv(polar);
 }
 
+#endif

@@ -1,4 +1,5 @@
-﻿
+﻿#ifndef AMENONE_NOISE_INCLUEDED
+#define AMENONE_NOISE_INCLUEDED
 uint2 uhash22(uint2 n)
 {
     uint2 k = uint2(0x456789abu, 0x6789ab45);
@@ -548,4 +549,6 @@ float domain_warp(in half2 st, half amplitude, int NUM_OCTAVES)
 {
     return domain_warp(st, amplitude, NUM_OCTAVES, 1.0);
 }
+#endif
+
 

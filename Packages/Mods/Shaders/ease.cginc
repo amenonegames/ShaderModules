@@ -1,4 +1,5 @@
-
+#ifndef AMENONE_EASE_INCLUEDED
+#define AMENONE_EASE_INCLUEDED
 static const float EASE_PI = 3.14159265358979;
 
 // in: float 進行度t[0,1]  out: float 線形（変換なし）
@@ -261,3 +262,4 @@ float ease_out_in(float t, float power)
         ? (1.0 - pow(1.0 - 2.0 * t, power)) * 0.5
         : pow(2.0 * t - 1.0, power) * 0.5 + 0.5;
 }
+#endif

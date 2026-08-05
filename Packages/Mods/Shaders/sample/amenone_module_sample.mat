@@ -13,7 +13,7 @@ Material:
   m_ModifiedSerializedProperties: 0
   m_ValidKeywords: []
   m_InvalidKeywords:
-  - _USE_CAUSTIC_ON
+  - _USE_DOMAIN_WARP_ON
   m_LightmapFlags: 4
   m_EnableInstancingVariants: 0
   m_DoubleSidedGI: 0
@@ -34,10 +34,11 @@ Material:
         m_Offset: {x: 0, y: 0}
     m_Ints: []
     m_Floats:
-    - _use_caustic: 1
+    - _use_caustic: 0
     - _use_cellular: 0
     - _use_curl_noise: 0
     - _use_curl_noise_fbm: 0
+    - _use_domain_warp: 1
     - _use_fbm: 0
     - _use_fbm_cellular: 0
     - _use_fbm_voronoi: 0
