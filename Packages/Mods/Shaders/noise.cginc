@@ -97,6 +97,7 @@ float3 permute(float3 x) {
 //  Copyright (C) 2011 Ashima Arts. All rights reserved.
 //  Distributed under the MIT License. See LICENSE file.
 //  https://github.com/ashima/webgl-noise
+//  Ported to HLSL and modified by amenonegames. See the Third-Party Notices section in LICENSE.md.
 //
 // in: float2 座標, float グラデーション方向のランダム化係数(推奨: 1/41≒0.0244)  out: float [-1,1] のシンプレックスノイズ値
 float simplex_noise(float2 v , float gradiantDirRandomizer) {

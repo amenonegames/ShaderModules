@@ -4,6 +4,7 @@
   "displayName": "Shader Modules",
   "description": "Shader Modules for Unity",
   "unity": "2020.2",
+  "license": "MIT",
   "author": {
     "name": "amenonegames"
   }
