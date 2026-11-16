@@ -41,7 +41,6 @@ Shader "amenone_module/sample"
         [Header(Fractal)]
         [MaterialToggle] _use_fractal_kifs("KIFS", float) = 0
         [MaterialToggle] _use_fractal_kaleidoscope_rings("Kaleidoscope Rings", float) = 0
-        [MaterialToggle] _use_fractal_sierpinski_triangle("Sierpinski Triangle", float) = 0
         [MaterialToggle] _use_fractal_koch_snowflake("Koch Snowflake", float) = 0
         [MaterialToggle] _use_fractal_sierpinski_carpet("Sierpinski Carpet", float) = 0
         [MaterialToggle] _use_fractal_box_fold("Box Fold", float) = 0
@@ -49,15 +48,15 @@ Shader "amenone_module/sample"
         [MaterialToggle] _use_fractal_kali("Kali", float) = 0
         [MaterialToggle] _use_fractal_glow_rings("Glow Rings", float) = 0
 
+        [Header(Fractal Infinite Zoom)]
+        [MaterialToggle] _use_zoom_sierpinski_triangle("Sierpinski Triangle Zoom", float) = 0
+        [MaterialToggle] _use_zoom_sierpinski_carpet("Sierpinski Carpet Zoom", float) = 0
+        [MaterialToggle] _use_zoom_koch_snowflake("Koch Snowflake Zoom", float) = 0
+
         [Header(Fractal Spiral)]
         [MaterialToggle] _use_golden_spiral_tile("Golden Spiral Tile", float) = 0
         [MaterialToggle] _use_double_spiral("Double Spiral", float) = 0
         [MaterialToggle] _use_spiral_kifs("Spiral KIFS", float) = 0
-
-        [Header(Arabesque)]
-        [MaterialToggle] _use_arabesque_hexagon_star("Hexagon Star", float) = 0
-        [MaterialToggle] _use_arabesque_square_star("Square Star", float) = 0
-        [MaterialToggle] _use_karakusa_swirl("Karakusa Swirl", float) = 0
 
     }
 
@@ -119,19 +118,18 @@ Shader "amenone_module/sample"
                 float _use_spiral;
                 float _use_fractal_kifs;
                 float _use_fractal_kaleidoscope_rings;
-                float _use_fractal_sierpinski_triangle;
                 float _use_fractal_koch_snowflake;
                 float _use_fractal_sierpinski_carpet;
                 float _use_fractal_box_fold;
                 float _use_fractal_apollonian;
                 float _use_fractal_kali;
                 float _use_fractal_glow_rings;
+                float _use_zoom_sierpinski_triangle;
+                float _use_zoom_sierpinski_carpet;
+                float _use_zoom_koch_snowflake;
                 float _use_golden_spiral_tile;
                 float _use_double_spiral;
                 float _use_spiral_kifs;
-                float _use_arabesque_hexagon_star;
-                float _use_arabesque_square_star;
-                float _use_karakusa_swirl;
             CBUFFER_END
 
             Varyings vert(Attributes IN)
@@ -178,21 +176,6 @@ Shader "amenone_module/sample"
                 float2 orbit = fractal_kifs_rings(folded, 8, float2(0.42, 0.16), oscillate_by_time(0.9, 0.12, 0.2), 1.35, 0.38);
                 float3 tint = cosine_palette(0.35 * log(orbit.y + 0.05) + 0.62, float3(0.0, 0.1, 0.2));
                 return float3(0.03, 0.03, 0.07) + tint * (0.8 * exp(-orbit.x * 240.0) + 0.1 * exp(-orbit.x * 40.0));
-            }
-
-            float3 sample_fractal_sierpinski_triangle(float2 p)
-            {
-                const float2 topVertex = float2(0.0, 1.0);
-                float smoothing = edge_smoothing_width(p);
-                float2 shifted = p * 1.05 + float2(0.0, 0.25);
-                float2 zoomed = topVertex + (shifted - topVertex) * exp2(-cycle_by_time(0.12, 1.0));
-                float2 fromTop = zoomed - topVertex;
-                float distanceToTriangle = fractal_sierpinski_triangle(zoomed, 6);
-                float fill = smoothstep(smoothing, -smoothing, distanceToTriangle);
-                float hue = log2(length(fromTop) + 1e-4) + 0.25 * sin(3.0 * atan2(fromTop.x, -fromTop.y));
-                float3 tint = cosine_palette(hue, float3(0.0, 0.15, 0.35));
-                float3 ground = float3(0.03, 0.035, 0.07) + tint * 0.55 * exp(-max(distanceToTriangle, 0.0) * 45.0);
-                return lerp(ground, tint, fill);
             }
 
             float3 sample_fractal_koch_snowflake(float2 p)
@@ -246,6 +229,66 @@ Shader "amenone_module/sample"
                 return fractal_glow_rings(p, 4, cycle_by_time(0.6, 2.0 * FRACTAL_PI), cycle_by_time(0.12, 1.0), float3(0.263, 0.416, 0.557));
             }
 
+            float zoomed_units_per_screen_unit(float2 zoomed, float2 screen)
+            {
+                return edge_smoothing_width(zoomed) / edge_smoothing_width(screen);
+            }
+
+            float3 sierpinski_triangle_zoom_shade(float distanceToTriangle, float3 tint, float smoothing, float zoomedPerScreen)
+            {
+                float fill = smoothstep(smoothing, -smoothing, distanceToTriangle);
+                float3 ground = float3(0.03, 0.035, 0.07) + tint * 0.55 * exp(-max(distanceToTriangle, 0.0) / zoomedPerScreen * 35.0);
+                return lerp(ground, tint, fill);
+            }
+
+            float3 sample_zoom_sierpinski_triangle(float2 p)
+            {
+                const float2 topVertex = float2(0.0, 1.0);
+                const float2 topVertexOnScreen = float2(0.0, 0.714);
+                float progress = _Time.y / 8.0;
+                float2 zoomed = zoom_loop(topVertex + (p - topVertexOnScreen) * 0.8, topVertex, 2.0, progress);
+                float smoothing = edge_smoothing_width(zoomed);
+                float zoomedPerScreen = zoomed_units_per_screen_unit(zoomed, p);
+                float2 fromTop = zoomed - topVertex;
+                float hue = log2(length(fromTop) + 1e-4) + 0.25 * sin(3.0 * atan2(fromTop.x, -fromTop.y));
+                float3 tint = cosine_palette(hue, float3(0.0, 0.15, 0.35));
+                float3 coarse = sierpinski_triangle_zoom_shade(fractal_sierpinski_triangle(zoomed, 6), tint, smoothing, zoomedPerScreen);
+                float3 fine = sierpinski_triangle_zoom_shade(fractal_sierpinski_triangle(zoomed, 7), tint, smoothing, zoomedPerScreen);
+                return lerp(coarse, fine, frac(progress));
+            }
+
+            float3 sample_zoom_sierpinski_carpet(float2 p)
+            {
+                const float2 fixedPoint = float2(0.5, 0.5);
+                float progress = _Time.y / 25.0;
+                float2 zoomed = zoom_loop(fixedPoint + p * 0.45, fixedPoint, 9.0, progress);
+                float smoothing = edge_smoothing_width(zoomed);
+                float level = 2.0 * frac(progress);
+                int iterations = 4 + (int)level;
+                float coarseFill = smoothstep(smoothing, -smoothing, fractal_sierpinski_carpet(zoomed, iterations));
+                float fineFill = smoothstep(smoothing, -smoothing, fractal_sierpinski_carpet(zoomed, iterations + 1));
+                float3 tint = cosine_palette(0.22 * (p.x - p.y) + cycle_by_time(0.05, 1.0) + 0.08, float3(0.0, 0.33, 0.6));
+                return lerp(float3(0.08, 0.075, 0.15), tint, lerp(coarseFill, fineFill, frac(level)));
+            }
+
+            float koch_outline_glow(float distanceOnScreen)
+            {
+                return exp(-distanceOnScreen * 140.0) + 0.3 * exp(-distanceOnScreen * 19.0) + 0.1 * exp(-distanceOnScreen * 3.0);
+            }
+
+            float3 sample_zoom_koch_snowflake(float2 p)
+            {
+                const float2 tip = float2(0.5, 0.2886751);
+                const float2 tipOnScreen = float2(0.55, 0.45);
+                float progress = _Time.y / 12.5;
+                float2 zoomed = zoom_loop(tip + (p - tipOnScreen) * 0.29, tip, 3.0, progress);
+                float zoomedPerScreen = zoomed_units_per_screen_unit(zoomed, p);
+                float coarseGlow = koch_outline_glow(fractal_koch_snowflake(zoomed, 5) / zoomedPerScreen);
+                float fineGlow = koch_outline_glow(fractal_koch_snowflake(zoomed, 6) / zoomedPerScreen);
+                float3 tint = cosine_palette(0.6 * length(p - tipOnScreen) + cycle_by_time(0.08, 1.0) + 0.5, float3(0.0, 0.12, 0.3));
+                return float3(0.02, 0.035, 0.07) + tint * lerp(coarseGlow, fineGlow, frac(progress));
+            }
+
             float3 sample_golden_spiral_tile(float2 p)
             {
                 const float2 target = float2(0.22, -0.14);
@@ -284,45 +327,6 @@ Shader "amenone_module/sample"
                 float3 ground = float3(0.03, 0.04, 0.08);
                 float3 shaded = ground + tint * (0.85 * exp(-orbit.x * 45.0) + 0.12 * exp(-orbit.x * 9.0));
                 return lerp(ground, shaded, smoothstep(0.004, 0.06, length(p - target)));
-            }
-
-            float3 sample_arabesque_hexagon_star(float2 p)
-            {
-                const float strapWidth = 0.035;
-                float2 scaled = p * 2.2;
-                float smoothing = edge_smoothing_width(scaled);
-                float signedDistance = arabesque_hexagon_star(scaled, oscillate_by_time(1.05, 0.3, 0.35));
-                float strapDistance = abs(signedDistance);
-                float3 shaded = lerp(float3(0.93, 0.88, 0.75), float3(0.04, 0.33, 0.47), smoothstep(-smoothing, smoothing, signedDistance));
-                shaded = lerp(shaded, float3(0.86, 0.63, 0.2), 1.0 - smoothstep(strapWidth - smoothing, strapWidth + smoothing, strapDistance));
-                return lerp(shaded, float3(0.07, 0.05, 0.08), 0.85 * (1.0 - smoothstep(smoothing, 2.5 * smoothing, abs(strapDistance - strapWidth))));
-            }
-
-            float3 sample_arabesque_square_star(float2 p)
-            {
-                const float strapWidth = 0.03;
-                float2 scaled = p * 2.0;
-                float smoothing = edge_smoothing_width(scaled);
-                float contactAngle = oscillate_by_time(1.18, 0.25, 0.3);
-                float straightDistance = arabesque_square_star(scaled, contactAngle);
-                float diagonalDistance = arabesque_square_star(rotate_around_origin(scaled, FRACTAL_PI / 4.0) * 0.70710678, contactAngle) * 1.41421356;
-                float insideStraight = smoothstep(-smoothing, smoothing, straightDistance);
-                float insideDiagonal = smoothstep(-smoothing, smoothing, diagonalDistance);
-                float3 shaded = lerp(float3(0.94, 0.9, 0.8), float3(0.1, 0.2, 0.5), abs(insideStraight - insideDiagonal));
-                shaded = lerp(shaded, float3(0.68, 0.24, 0.16), insideStraight * insideDiagonal);
-                float strapDistance = min(abs(straightDistance), abs(diagonalDistance));
-                shaded = lerp(shaded, float3(0.95, 0.93, 0.86), 1.0 - smoothstep(strapWidth - smoothing, strapWidth + smoothing, strapDistance));
-                return lerp(shaded, float3(0.06, 0.06, 0.1), 0.85 * (1.0 - smoothstep(smoothing, 2.5 * smoothing, abs(strapDistance - strapWidth))));
-            }
-
-            float3 sample_karakusa_swirl(float2 p)
-            {
-                const float vineWidth = 0.04;
-                float2 scaled = p * 2.2;
-                float smoothing = edge_smoothing_width(scaled);
-                float vineDistance = karakusa_swirl(scaled, cycle_by_time(0.08, 1.0));
-                float vine = 1.0 - smoothstep(vineWidth - smoothing, vineWidth + smoothing, vineDistance);
-                return lerp(float3(0.03, 0.27, 0.19), float3(0.94, 0.95, 0.9), vine);
             }
 
             half4 frag(Varyings IN) : SV_Target
@@ -374,7 +378,6 @@ Shader "amenone_module/sample"
                 float2 p = uv * 2. - 1.;
                 if (_use_fractal_kifs)                 color.rgb += sample_fractal_kifs(p);
                 if (_use_fractal_kaleidoscope_rings)   color.rgb += sample_fractal_kaleidoscope_rings(p);
-                if (_use_fractal_sierpinski_triangle)  color.rgb += sample_fractal_sierpinski_triangle(p);
                 if (_use_fractal_koch_snowflake)       color.rgb += sample_fractal_koch_snowflake(p);
                 if (_use_fractal_sierpinski_carpet)    color.rgb += sample_fractal_sierpinski_carpet(p);
                 if (_use_fractal_box_fold)             color.rgb += sample_fractal_box_fold(p);
@@ -382,13 +385,13 @@ Shader "amenone_module/sample"
                 if (_use_fractal_kali)                 color.rgb += sample_fractal_kali(p);
                 if (_use_fractal_glow_rings)           color.rgb += sample_fractal_glow_rings(p);
 
+                if (_use_zoom_sierpinski_triangle)  color.rgb += sample_zoom_sierpinski_triangle(p);
+                if (_use_zoom_sierpinski_carpet)    color.rgb += sample_zoom_sierpinski_carpet(p);
+                if (_use_zoom_koch_snowflake)       color.rgb += sample_zoom_koch_snowflake(p);
+
                 if (_use_golden_spiral_tile)  color.rgb += sample_golden_spiral_tile(p);
                 if (_use_double_spiral)       color.rgb += sample_double_spiral(p);
                 if (_use_spiral_kifs)         color.rgb += sample_spiral_kifs(p);
-
-                if (_use_arabesque_hexagon_star)  color.rgb += sample_arabesque_hexagon_star(p);
-                if (_use_arabesque_square_star)   color.rgb += sample_arabesque_square_star(p);
-                if (_use_karakusa_swirl)          color.rgb += sample_karakusa_swirl(p);
 
 
 

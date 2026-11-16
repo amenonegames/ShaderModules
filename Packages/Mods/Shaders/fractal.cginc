@@ -1,43 +1,13 @@
 #ifndef AMENONE_FRACTAL_INCLUEDED
 #define AMENONE_FRACTAL_INCLUEDED
 // 推奨反復回数は Switch(初代) 全画面 60fps を想定した見積もりで、実測値ではない。上限は 720p で細部が 1 ピクセル未満になる回数
-#include "noise.cginc"
 static const float FRACTAL_PI = 3.14159265358979;
 static const float FRACTAL_SQRT3 = 1.7320508;
 static const float FRACTAL_GOLDEN_RATIO = 1.6180339887;
-static const float FRACTAL_KARAKUSA_PITCH = 0.27;
-static const float FRACTAL_KARAKUSA_CURL_RADIUS = 0.64;
 
 float _fractal_mod(float x, float y)
 {
     return x - y * floor(x / y);
-}
-
-float2 _fractal_mod(float2 x, float2 y)
-{
-    return x - y * floor(x / y);
-}
-
-float2 _fractal_hexagon_local(float2 p)
-{
-    const float2 hexagonPeriod = float2(1.0, FRACTAL_SQRT3);
-    float2 halfPeriod = hexagonPeriod * 0.5;
-    float2 fromEvenCenter = _fractal_mod(p, hexagonPeriod) - halfPeriod;
-    float2 fromOddCenter = _fractal_mod(p - halfPeriod, hexagonPeriod) - halfPeriod;
-    return dot(fromEvenCenter, fromEvenCenter) < dot(fromOddCenter, fromOddCenter) ? fromEvenCenter : fromOddCenter;
-}
-
-float2 _fractal_fold_kaleidoscope_axis_centered(float2 p, float segmentCount)
-{
-    float halfSegmentAngle = FRACTAL_PI / segmentCount;
-    float angle = atan2(p.y, p.x);
-    angle = abs(_fractal_mod(angle + halfSegmentAngle, 2.0 * halfSegmentAngle) - halfSegmentAngle);
-    return length(p) * float2(cos(angle), sin(angle));
-}
-
-float _fractal_star_line_distance(float2 folded, float contactAngle)
-{
-    return dot(folded - float2(0.5, 0.0), float2(cos(contactAngle), sin(contactAngle)));
 }
 
 float2x2 _fractal_rotation(float angle)
@@ -70,6 +40,13 @@ float _fractal_box_distance(float2 p, float halfSize)
 float3 cosine_palette(float t, float3 phase)
 {
     return 0.5 + 0.5 * cos(2.0 * FRACTAL_PI * (t + phase));
+}
+
+// in: float2 座標, float2 ズームの中心, float 1 周あたりの拡大率, float 進み具合（1 で 1 周）  out: float2 中心へ拡大した座標。進み具合の整数部は無視するので、自己相似な中心と倍率を渡すと継ぎ目なく繰り返す
+// 反復なし
+float2 zoom_loop(float2 p, float2 center, float zoomPerLoop, float progress)
+{
+    return center + (p - center) * pow(zoomPerLoop, -frac(progress));
 }
 
 // in: float2 座標, float 回転対称の数  out: float2 角度を segmentCount 等分して鏡映で折りたたんだ座標
@@ -130,6 +107,7 @@ float2 fractal_kifs_rings(float2 p, int iterations, float2 offset, float angle, 
 }
 
 // in: float2 座標（外接円半径 1・上向きの正三角形）, int 反復回数  out: float 符号付き距離（内側が負）
+// 頂点 (0, 1) を中心に 2 倍で自己相似（1 段深い反復と対応）
 // 推奨反復回数: 6〜8（上限 10）
 float fractal_sierpinski_triangle(float2 p, int iterations)
 {
@@ -148,6 +126,7 @@ float fractal_sierpinski_triangle(float2 p, int iterations)
 }
 
 // in: float2 座標（原点中心・外接円半径 約 0.58）, int 反復回数  out: float 雪片の輪郭までの距離
+// 3 つの先端 (±0.5, 0.2886751), (0, -0.5773503) を中心に 3 倍で自己相似（1 段深い反復と対応）
 // 推奨反復回数: 4〜5（上限 6）
 float fractal_koch_snowflake(float2 p, int iterations)
 {
@@ -170,6 +149,7 @@ float fractal_koch_snowflake(float2 p, int iterations)
 }
 
 // in: float2 座標（[-1,1] の正方形）, int 反復回数  out: float 符号付き距離（内側が負）
+// (±0.5, ±0.5) を中心に 9 倍で自己相似（2 段深い反復と対応）
 // 推奨反復回数: 4〜5（上限 6）
 float fractal_sierpinski_carpet(float2 p, int iterations)
 {
@@ -308,47 +288,4 @@ float log_spiral_line_distance(float2 spiralCoord, float growthPerQuarterTurn)
     return abs(frac(spiralCoord.y + 0.5) - 0.5) * 4.0 * log(growthPerQuarterTurn);
 }
 
-// in: float2 座標（六角形の中心間距離 1）, float 線の接触角（0.35〜1.45、1.05 前後で六芒星）  out: float 線までの符号付き距離（正が星の外側の多角形、負が星の側。abs で線、abs(...) - 太さ で帯）
-// 反復なし
-float arabesque_hexagon_star(float2 p, float contactAngle)
-{
-    float2 inHexagon = _fractal_hexagon_local(p);
-    float2 folded = _fractal_fold_kaleidoscope_axis_centered(inHexagon, 6.0);
-    return _fractal_star_line_distance(folded, contactAngle);
-}
-
-// in: float2 座標（正方形 1 マスの辺の長さ 1）, float 線の接触角（0.4〜1.45）  out: float 線までの符号付き距離（正が星の外側の多角形、負が星の側）
-// 8 方向の星にするには、45 度回して 1/√2 倍した座標でもう 1 回呼んで結果に √2 を掛け、min(abs(1 回目), abs(2 回目)) で線を重ねる
-// 反復なし
-float arabesque_square_star(float2 p, float contactAngle)
-{
-    float2 folded = abs(frac(p) - 0.5);
-    if (folded.y > folded.x)
-    {
-        folded = folded.yx;
-    }
-    return _fractal_star_line_distance(folded, contactAngle);
-}
-
-// in: float2 座標（1 マスに渦 1 つ）, float 渦の巻き込み位相[0,1)  out: float つるの中心線までの距離（これ - 太さ で塗り分ける）
-// 反復なし（近傍 9 セルを走査）
-float karakusa_swirl(float2 p, float windingPhase)
-{
-    float vineDistance = 1e9;
-    for (int y = -1; y <= 1; y++)
-    {
-        for (int x = -1; x <= 1; x++)
-        {
-            float2 cell = floor(p) + float2(x, y);
-            float2 randomValue = hash22(cell);
-            float2 fromCenter = p - (cell + 0.5 + 0.3 * (randomValue - 0.5));
-            float radius = length(fromCenter);
-            float windingDirection = _fractal_mod(cell.x + cell.y, 2.0) < 0.5 ? 1.0 : -1.0;
-            float turns = radius / FRACTAL_KARAKUSA_PITCH - windingDirection * (atan2(fromCenter.y, fromCenter.x) / (2.0 * FRACTAL_PI) + windingPhase) + randomValue.x;
-            float armDistance = abs(frac(turns + 0.5) - 0.5) * FRACTAL_KARAKUSA_PITCH;
-            vineDistance = min(vineDistance, max(armDistance, radius - FRACTAL_KARAKUSA_CURL_RADIUS));
-        }
-    }
-    return vineDistance;
-}
 #endif
