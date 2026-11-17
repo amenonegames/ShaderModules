@@ -3,7 +3,7 @@ Shader "amenone_module/sample"
     Properties
     {
         [MainColor] _BaseColor("Base Color", Color) = (1, 1, 1, 1)
-        [MainTexture] _BaseMap("Base Map", 2D) = "white"
+        [MainTexture] _BaseMap("Base Map", 2D) = "white" {}
         [Header(Transpose)]
         [MaterialToggle] _use_polar("Polar (R=radius G=angle)", float) = 0
         [MaterialToggle] _use_rotate("Rotate (RG=uv)", float) = 0
@@ -54,9 +54,22 @@ Shader "amenone_module/sample"
         [MaterialToggle] _use_zoom_koch_snowflake("Koch Snowflake Zoom", float) = 0
 
         [Header(Fractal Spiral)]
-        [MaterialToggle] _use_golden_spiral_tile("Golden Spiral Tile", float) = 0
-        [MaterialToggle] _use_double_spiral("Double Spiral", float) = 0
+        [MaterialToggle] _use_log_spiral("Log Spiral", float) = 0
         [MaterialToggle] _use_spiral_kifs("Spiral KIFS", float) = 0
+
+        [Header(Zellige)]
+        [MaterialToggle] _use_zellige("Zellige", float) = 0
+        _zellige_tile_density("Tile Density", float) = 4
+        _zellige_line_width("Line Width", Range(0.005, 0.2)) = 0.05
+        [IntRange] _zellige_segment_count("Kaleidoscope Segments", Range(2, 24)) = 8
+        _zellige_rotation_speed("Rotation Speed (rad/s)", float) = 0.1
+        _zellige_scroll_speed("Scroll Speed (cells/s)", float) = 0.2
+        _zellige_contact_angle("Contact Angle (deg)", Range(22.5, 67.5)) = 45
+        _zellige_contact_angle_amplitude("Contact Angle Amplitude (deg)", Range(0, 22.5)) = 15
+        _zellige_contact_angle_speed("Contact Angle Speed", float) = 0.5
+
+        [Header(Distance Gradient)]
+        [MaterialToggle] _show_distance_gradient("Show Distance Gradient", float) = 0
 
     }
 
@@ -75,6 +88,7 @@ Shader "amenone_module/sample"
             #include "Packages/com.amenone.shadermodules/Shaders/noise.cginc"
             #include "Packages/com.amenone.shadermodules/Shaders/transpose.cginc"
             #include "Packages/com.amenone.shadermodules/Shaders/fractal.cginc"
+            #include "Packages/com.amenone.shadermodules/Shaders/zellige.cginc"
 
             struct Attributes
             {
@@ -127,9 +141,18 @@ Shader "amenone_module/sample"
                 float _use_zoom_sierpinski_triangle;
                 float _use_zoom_sierpinski_carpet;
                 float _use_zoom_koch_snowflake;
-                float _use_golden_spiral_tile;
-                float _use_double_spiral;
+                float _use_log_spiral;
                 float _use_spiral_kifs;
+                float _use_zellige;
+                float _zellige_tile_density;
+                float _zellige_line_width;
+                float _zellige_segment_count;
+                float _zellige_rotation_speed;
+                float _zellige_scroll_speed;
+                float _zellige_contact_angle;
+                float _zellige_contact_angle_amplitude;
+                float _zellige_contact_angle_speed;
+                float _show_distance_gradient;
             CBUFFER_END
 
             Varyings vert(Attributes IN)
@@ -140,193 +163,24 @@ Shader "amenone_module/sample"
                 return OUT;
             }
 
-            float oscillate_by_time(float center, float amplitude, float speed)
+            ZelligeStyle zellige_style_from_material()
             {
-                return center + amplitude * sin(_Time.y * speed);
+                ZelligeStyle style = zellige_default_style();
+                style.tileDensity = _zellige_tile_density;
+                style.lineWidth = _zellige_line_width;
+                style.segmentCount = _zellige_segment_count;
+                style.rotationSpeed = _zellige_rotation_speed;
+                style.scrollSpeed = _zellige_scroll_speed;
+                style.contactAngleDegrees = _zellige_contact_angle;
+                style.contactAngleAmplitudeDegrees = _zellige_contact_angle_amplitude;
+                style.contactAngleSpeed = _zellige_contact_angle_speed;
+                return style;
             }
 
-            float cycle_by_time(float rate, float period)
+            float3 gradient_direction_color(float2 gradient)
             {
-                return fmod(_Time.y * rate, period);
-            }
-
-            float2 rotate_around_origin(float2 p, float radians)
-            {
-                return rotate(p + 0.5, radians / (2.0 * FRACTAL_PI)) - 0.5;
-            }
-
-            float edge_smoothing_width(float2 p)
-            {
-                float2 pixelSize = fwidth(p);
-                return 0.75 * max(pixelSize.x, pixelSize.y);
-            }
-
-            float3 sample_fractal_kifs(float2 p)
-            {
-                float2 orbit = fractal_kifs(p * 1.3, 10, float2(0.5, 0.28), oscillate_by_time(0.62, 0.1, 0.3), 1.5);
-                float3 tint = cosine_palette(0.3 * log(orbit.y + 0.05) + 0.1, float3(0.0, 0.2, 0.45));
-                return float3(0.03, 0.04, 0.08) + tint * (0.85 * exp(-orbit.x * 260.0) + 0.1 * exp(-orbit.x * 45.0));
-            }
-
-            float3 sample_fractal_kaleidoscope_rings(float2 p)
-            {
-                float overallRotation = cycle_by_time(0.05, 2.0 * FRACTAL_PI);
-                float2 rotated = rotate_around_origin(p * 1.15, overallRotation);
-                float2 folded = fold_kaleidoscope(rotated, 6.0);
-                float2 orbit = fractal_kifs_rings(folded, 8, float2(0.42, 0.16), oscillate_by_time(0.9, 0.12, 0.2), 1.35, 0.38);
-                float3 tint = cosine_palette(0.35 * log(orbit.y + 0.05) + 0.62, float3(0.0, 0.1, 0.2));
-                return float3(0.03, 0.03, 0.07) + tint * (0.8 * exp(-orbit.x * 240.0) + 0.1 * exp(-orbit.x * 40.0));
-            }
-
-            float3 sample_fractal_koch_snowflake(float2 p)
-            {
-                float2 rotated = rotate_around_origin(p, oscillate_by_time(0.0, 0.08, 0.25));
-                float distanceToOutline = fractal_koch_snowflake(rotated * 0.62, 5);
-                float3 tint = cosine_palette(0.6 * length(rotated) + cycle_by_time(0.08, 1.0) + 0.5, float3(0.0, 0.12, 0.3));
-                float glow = exp(-distanceToOutline * 220.0) + 0.3 * exp(-distanceToOutline * 30.0) + 0.1 * exp(-distanceToOutline * 5.0);
-                return float3(0.02, 0.035, 0.07) + tint * glow;
-            }
-
-            float3 sample_fractal_sierpinski_carpet(float2 p)
-            {
-                float smoothing = edge_smoothing_width(p);
-                float2 scaled = p * 1.08;
-                float distanceToCarpet = fractal_sierpinski_carpet(scaled, 5);
-                float fill = smoothstep(smoothing, -smoothing, distanceToCarpet);
-                float3 tint = cosine_palette(0.22 * (scaled.x - scaled.y) + cycle_by_time(0.05, 1.0) + 0.08, float3(0.0, 0.33, 0.6));
-                return lerp(float3(0.08, 0.075, 0.15), tint, fill);
-            }
-
-            float3 sample_fractal_box_fold(float2 p)
-            {
-                float3 orbit = fractal_box_fold(p * 2.5, 12, oscillate_by_time(-1.75, 0.08, 0.3));
-                float bounded = 1.0 - smoothstep(4.0, 40.0, orbit.z);
-                float3 tint = cosine_palette(0.16 * log(orbit.x + 1e-3) + 0.58, float3(0.0, 0.1, 0.22));
-                float3 shaded = tint * (0.18 + 0.82 * bounded);
-                shaded += float3(0.9, 0.95, 1.0) * exp(-orbit.y * 26.0) * 0.45 * bounded;
-                return shaded * 0.92 + float3(0.02, 0.02, 0.04);
-            }
-
-            float3 sample_fractal_apollonian(float2 p)
-            {
-                float2 shifted = p * 1.15 + float2(oscillate_by_time(0.0, 0.08, 0.2), 0.0);
-                float2 orbit = fractal_apollonian(shifted, 8, oscillate_by_time(1.18, 0.07, 0.25));
-                float3 tint = cosine_palette(0.28 * log(orbit.y + 1e-3) + 0.95, float3(0.0, 0.08, 0.18));
-                float3 shaded = tint * (0.16 + 0.5 * smoothstep(0.0, 0.6, sqrt(orbit.y)));
-                return shaded + float3(1.0, 0.92, 0.8) * exp(-orbit.x * 260.0) * 0.8;
-            }
-
-            float3 sample_fractal_kali(float2 p)
-            {
-                float2 offset = float2(oscillate_by_time(0.85, 0.025, 0.3), oscillate_by_time(0.52, 0.025, 0.23));
-                float2 orbit = fractal_kali(p * 1.25 + float2(0.3, 0.15), 12, offset);
-                float3 tint = cosine_palette(0.22 * log(orbit.y + 1e-3) + 0.72, float3(0.0, 0.12, 0.28));
-                return float3(0.02, 0.02, 0.05) + tint * (0.2 + 2.6 * orbit.x * orbit.x) + float3(1.0, 0.9, 0.8) * exp(-orbit.y * 9.0) * 0.5;
-            }
-
-            float3 sample_fractal_glow_rings(float2 p)
-            {
-                return fractal_glow_rings(p, 4, cycle_by_time(0.6, 2.0 * FRACTAL_PI), cycle_by_time(0.12, 1.0), float3(0.263, 0.416, 0.557));
-            }
-
-            float zoomed_units_per_screen_unit(float2 zoomed, float2 screen)
-            {
-                return edge_smoothing_width(zoomed) / edge_smoothing_width(screen);
-            }
-
-            float3 sierpinski_triangle_zoom_shade(float distanceToTriangle, float3 tint, float smoothing, float zoomedPerScreen)
-            {
-                float fill = smoothstep(smoothing, -smoothing, distanceToTriangle);
-                float3 ground = float3(0.03, 0.035, 0.07) + tint * 0.55 * exp(-max(distanceToTriangle, 0.0) / zoomedPerScreen * 35.0);
-                return lerp(ground, tint, fill);
-            }
-
-            float3 sample_zoom_sierpinski_triangle(float2 p)
-            {
-                const float2 topVertex = float2(0.0, 1.0);
-                const float2 topVertexOnScreen = float2(0.0, 0.714);
-                float progress = _Time.y / 8.0;
-                float2 zoomed = zoom_loop(topVertex + (p - topVertexOnScreen) * 0.8, topVertex, 2.0, progress);
-                float smoothing = edge_smoothing_width(zoomed);
-                float zoomedPerScreen = zoomed_units_per_screen_unit(zoomed, p);
-                float2 fromTop = zoomed - topVertex;
-                float hue = log2(length(fromTop) + 1e-4) + 0.25 * sin(3.0 * atan2(fromTop.x, -fromTop.y));
-                float3 tint = cosine_palette(hue, float3(0.0, 0.15, 0.35));
-                float3 coarse = sierpinski_triangle_zoom_shade(fractal_sierpinski_triangle(zoomed, 6), tint, smoothing, zoomedPerScreen);
-                float3 fine = sierpinski_triangle_zoom_shade(fractal_sierpinski_triangle(zoomed, 7), tint, smoothing, zoomedPerScreen);
-                return lerp(coarse, fine, frac(progress));
-            }
-
-            float3 sample_zoom_sierpinski_carpet(float2 p)
-            {
-                const float2 fixedPoint = float2(0.5, 0.5);
-                float progress = _Time.y / 25.0;
-                float2 zoomed = zoom_loop(fixedPoint + p * 0.45, fixedPoint, 9.0, progress);
-                float smoothing = edge_smoothing_width(zoomed);
-                float level = 2.0 * frac(progress);
-                int iterations = 4 + (int)level;
-                float coarseFill = smoothstep(smoothing, -smoothing, fractal_sierpinski_carpet(zoomed, iterations));
-                float fineFill = smoothstep(smoothing, -smoothing, fractal_sierpinski_carpet(zoomed, iterations + 1));
-                float3 tint = cosine_palette(0.22 * (p.x - p.y) + cycle_by_time(0.05, 1.0) + 0.08, float3(0.0, 0.33, 0.6));
-                return lerp(float3(0.08, 0.075, 0.15), tint, lerp(coarseFill, fineFill, frac(level)));
-            }
-
-            float koch_outline_glow(float distanceOnScreen)
-            {
-                return exp(-distanceOnScreen * 140.0) + 0.3 * exp(-distanceOnScreen * 19.0) + 0.1 * exp(-distanceOnScreen * 3.0);
-            }
-
-            float3 sample_zoom_koch_snowflake(float2 p)
-            {
-                const float2 tip = float2(0.5, 0.2886751);
-                const float2 tipOnScreen = float2(0.55, 0.45);
-                float progress = _Time.y / 12.5;
-                float2 zoomed = zoom_loop(tip + (p - tipOnScreen) * 0.29, tip, 3.0, progress);
-                float zoomedPerScreen = zoomed_units_per_screen_unit(zoomed, p);
-                float coarseGlow = koch_outline_glow(fractal_koch_snowflake(zoomed, 5) / zoomedPerScreen);
-                float fineGlow = koch_outline_glow(fractal_koch_snowflake(zoomed, 6) / zoomedPerScreen);
-                float3 tint = cosine_palette(0.6 * length(p - tipOnScreen) + cycle_by_time(0.08, 1.0) + 0.5, float3(0.0, 0.12, 0.3));
-                return float3(0.02, 0.035, 0.07) + tint * lerp(coarseGlow, fineGlow, frac(progress));
-            }
-
-            float3 sample_golden_spiral_tile(float2 p)
-            {
-                const float2 target = float2(0.22, -0.14);
-                float2 coord = golden_spiral_coord(p, target);
-                coord.y += cycle_by_time(0.04, 1.0);
-                float2 fromTileCenter = abs(spiral_tile(coord, 4.0));
-                float tileEdge = max(fromTileCenter.x, fromTileCenter.y);
-                float tile = smoothstep(0.47, 0.41, tileEdge);
-                float3 tint = cosine_palette(coord.y + 0.25 * coord.x + 0.1, float3(0.0, 0.12, 0.3));
-                float3 shaded = lerp(float3(0.03, 0.035, 0.07), tint * (0.55 + 0.9 * (0.5 - tileEdge)), tile);
-                shaded += float3(1.0, 0.92, 0.75) * exp(-log_spiral_line_distance(coord, FRACTAL_GOLDEN_RATIO) * 45.0);
-                return lerp(tint * 0.45, shaded, smoothstep(0.004, 0.05, length(p - target)));
-            }
-
-            float3 sample_double_spiral(float2 p)
-            {
-                const float2 sink = float2(0.5, 0.12);
-                const float2 source = float2(-0.5, -0.12);
-                float2 coord = double_spiral_coord(p, sink, source, exp(0.32));
-                coord.y -= cycle_by_time(0.05, 1.0);
-                float fromTileCenter = length(spiral_tile(coord, 3.0));
-                float disc = smoothstep(0.42, 0.34, fromTileCenter);
-                float3 tint = cosine_palette(coord.y + 0.25 * coord.x + 0.55, float3(0.0, 0.33, 0.6));
-                float3 shaded = lerp(float3(0.03, 0.035, 0.07), tint * (1.15 - 1.2 * fromTileCenter), disc);
-                return lerp(tint * 0.35, shaded, smoothstep(0.0, 0.05, min(distance(p, sink), distance(p, source))));
-            }
-
-            float3 sample_spiral_kifs(float2 p)
-            {
-                const float2 target = float2(-0.2, 0.1);
-                float2 coord = golden_spiral_coord(p, target);
-                coord.y += cycle_by_time(0.03, 1.0);
-                float2 tile = spiral_tile(coord, 2.0) * 2.6;
-                float2 orbit = fractal_kifs(tile, 6, float2(0.5, 0.28), oscillate_by_time(0.62, 0.1, 0.3), 1.5);
-                float3 tint = cosine_palette(coord.y + 0.25 * coord.x + 0.3 * log(orbit.y + 0.05), float3(0.0, 0.2, 0.45));
-                float3 ground = float3(0.03, 0.04, 0.08);
-                float3 shaded = ground + tint * (0.85 * exp(-orbit.x * 45.0) + 0.12 * exp(-orbit.x * 9.0));
-                return lerp(ground, shaded, smoothstep(0.004, 0.06, length(p - target)));
+                float2 direction = gradient * rsqrt(max(dot(gradient, gradient), 1e-12));
+                return float3(direction * 0.5 + 0.5, 1.0);
             }
 
             half4 frag(Varyings IN) : SV_Target
@@ -376,22 +230,134 @@ Shader "amenone_module/sample"
                 }
 
                 float2 p = uv * 2. - 1.;
-                if (_use_fractal_kifs)                 color.rgb += sample_fractal_kifs(p);
-                if (_use_fractal_kaleidoscope_rings)   color.rgb += sample_fractal_kaleidoscope_rings(p);
-                if (_use_fractal_koch_snowflake)       color.rgb += sample_fractal_koch_snowflake(p);
-                if (_use_fractal_sierpinski_carpet)    color.rgb += sample_fractal_sierpinski_carpet(p);
-                if (_use_fractal_box_fold)             color.rgb += sample_fractal_box_fold(p);
-                if (_use_fractal_apollonian)           color.rgb += sample_fractal_apollonian(p);
-                if (_use_fractal_kali)                 color.rgb += sample_fractal_kali(p);
-                if (_use_fractal_glow_rings)           color.rgb += sample_fractal_glow_rings(p);
+                float2 distanceGradient;
+                if (_use_fractal_kifs)
+                {
+                    if (_show_distance_gradient)
+                    {
+                        fractal_kifs_color(p, distanceGradient);
+                        color.rgb += gradient_direction_color(distanceGradient);
+                    }
+                    else
+                    {
+                        color.rgb += fractal_kifs_color(p);
+                    }
+                }
+                if (_use_fractal_kaleidoscope_rings)
+                {
+                    if (_show_distance_gradient)
+                    {
+                        fractal_kaleidoscope_rings_color(p, distanceGradient);
+                        color.rgb += gradient_direction_color(distanceGradient);
+                    }
+                    else
+                    {
+                        color.rgb += fractal_kaleidoscope_rings_color(p);
+                    }
+                }
+                if (_use_fractal_koch_snowflake)
+                {
+                    if (_show_distance_gradient)
+                    {
+                        fractal_koch_snowflake_color(p, distanceGradient);
+                        color.rgb += gradient_direction_color(distanceGradient);
+                    }
+                    else
+                    {
+                        color.rgb += fractal_koch_snowflake_color(p);
+                    }
+                }
+                if (_use_fractal_sierpinski_carpet)
+                {
+                    if (_show_distance_gradient)
+                    {
+                        fractal_sierpinski_carpet_color(p, distanceGradient);
+                        color.rgb += gradient_direction_color(distanceGradient);
+                    }
+                    else
+                    {
+                        color.rgb += fractal_sierpinski_carpet_color(p);
+                    }
+                }
+                if (_use_fractal_box_fold)             color.rgb += fractal_box_fold_color(p);
+                if (_use_fractal_apollonian)           color.rgb += fractal_apollonian_color(p);
+                if (_use_fractal_kali)                 color.rgb += fractal_kali_color(p);
+                if (_use_fractal_glow_rings)           color.rgb += fractal_glow_rings_color(p);
 
-                if (_use_zoom_sierpinski_triangle)  color.rgb += sample_zoom_sierpinski_triangle(p);
-                if (_use_zoom_sierpinski_carpet)    color.rgb += sample_zoom_sierpinski_carpet(p);
-                if (_use_zoom_koch_snowflake)       color.rgb += sample_zoom_koch_snowflake(p);
+                if (_use_zoom_sierpinski_triangle)
+                {
+                    if (_show_distance_gradient)
+                    {
+                        fractal_zoom_sierpinski_triangle_color(p, distanceGradient);
+                        color.rgb += gradient_direction_color(distanceGradient);
+                    }
+                    else
+                    {
+                        color.rgb += fractal_zoom_sierpinski_triangle_color(p);
+                    }
+                }
+                if (_use_zoom_sierpinski_carpet)
+                {
+                    if (_show_distance_gradient)
+                    {
+                        fractal_zoom_sierpinski_carpet_color(p, distanceGradient);
+                        color.rgb += gradient_direction_color(distanceGradient);
+                    }
+                    else
+                    {
+                        color.rgb += fractal_zoom_sierpinski_carpet_color(p);
+                    }
+                }
+                if (_use_zoom_koch_snowflake)
+                {
+                    if (_show_distance_gradient)
+                    {
+                        fractal_zoom_koch_snowflake_color(p, distanceGradient);
+                        color.rgb += gradient_direction_color(distanceGradient);
+                    }
+                    else
+                    {
+                        color.rgb += fractal_zoom_koch_snowflake_color(p);
+                    }
+                }
 
-                if (_use_golden_spiral_tile)  color.rgb += sample_golden_spiral_tile(p);
-                if (_use_double_spiral)       color.rgb += sample_double_spiral(p);
-                if (_use_spiral_kifs)         color.rgb += sample_spiral_kifs(p);
+                if (_use_log_spiral)
+                {
+                    if (_show_distance_gradient)
+                    {
+                        fractal_log_spiral_color(p, distanceGradient);
+                        color.rgb += gradient_direction_color(distanceGradient);
+                    }
+                    else
+                    {
+                        color.rgb += fractal_log_spiral_color(p);
+                    }
+                }
+                if (_use_spiral_kifs)
+                {
+                    if (_show_distance_gradient)
+                    {
+                        fractal_spiral_kifs_color(p, distanceGradient);
+                        color.rgb += gradient_direction_color(distanceGradient);
+                    }
+                    else
+                    {
+                        color.rgb += fractal_spiral_kifs_color(p);
+                    }
+                }
+
+                if (_use_zellige)
+                {
+                    if (_show_distance_gradient)
+                    {
+                        zellige_color(p, zellige_style_from_material(), distanceGradient);
+                        color.rgb += gradient_direction_color(distanceGradient);
+                    }
+                    else
+                    {
+                        color.rgb += zellige_color(p, zellige_style_from_material());
+                    }
+                }
 
 
 
